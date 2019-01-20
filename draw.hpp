@@ -16,8 +16,16 @@ public:
     int render ();
 
 protected:
+    void mouselook (float xpos, float ypos);
+
     unsigned long deltaTime;
     unsigned long lastFrame;
+
+    bool firstMouse;
+    float yaw;
+    float pitch;
+    float lastX;
+    float lastY;
 
     float fov;
     glm::vec3 cameraPos;
