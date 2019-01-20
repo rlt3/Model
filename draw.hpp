@@ -24,9 +24,6 @@ protected:
     bool firstMouse;
     float yaw;
     float pitch;
-    float lastX;
-    float lastY;
-
     float fov;
     glm::vec3 cameraPos;
     glm::vec3 cameraFront;
