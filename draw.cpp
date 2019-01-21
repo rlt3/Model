@@ -15,65 +15,84 @@ checkGLError()
 
 static const GLchar* vertex_source =
     "#version 130\n"
-    "in vec4 vertex;\n"
+    "in vec3 vertex;\n"
+    "in vec3 norm;\n"
+	"out vec3 FragPos;\n"
+	"out vec3 Normal;\n"
     "uniform mat4 model;\n"
     "uniform mat4 view;\n"
     "uniform mat4 projection;\n"
     "void main()\n"
     "{\n"
+    "   FragPos = vec3(model * vec4(vertex, 1.0));\n"
+    "   Normal = norm;\n"
     "   gl_Position = projection * view * model * vec4(vertex.xyz, 1.0);\n"
     "}";
 
 static const GLchar* fragment_source =
     "#version 130\n"
     "out vec4 FragColor;\n"
+    "in vec3 Normal;\n"
+    "in vec3 FragPos;\n"
+    "uniform vec3 lightPos;\n"
+    "uniform vec3 lightColor;\n"
+    "uniform vec3 objectColor;\n"
     "void main()\n"
     "{\n"
-    "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+    "   float ambientStrength = 0.1;\n"
+    "   vec3 ambient = ambientStrength * lightColor;\n"
+    "\n"
+    "   vec3 norm = normalize(Normal);\n"
+    "   vec3 lightDir = normalize(lightPos - FragPos);\n"
+    "   float diff = max(dot(norm, lightDir), 0.0);\n"
+    "   vec3 diffuse = diff * lightColor;\n"
+    "\n"
+    "   vec3 result = (ambient + diffuse) * objectColor;\n"
+    "   FragColor = vec4(result, 1.0);\n"
     "}";
 
 static float vertices[] = {
-	-0.5f, -0.5f, -0.5f,
-	 0.5f, -0.5f, -0.5f,
-	 0.5f,  0.5f, -0.5f,
-	 0.5f,  0.5f, -0.5f,
-	-0.5f,  0.5f, -0.5f,
-	-0.5f, -0.5f, -0.5f,
+	-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+	 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+	 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+	 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+	-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
 
-	-0.5f, -0.5f,  0.5f,
-	 0.5f, -0.5f,  0.5f,
-	 0.5f,  0.5f,  0.5f,
-	 0.5f,  0.5f,  0.5f,
-	-0.5f,  0.5f,  0.5f,
-	-0.5f, -0.5f,  0.5f,
+	-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+	 0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+	 0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+	 0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+	-0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+	-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
 
-	-0.5f,  0.5f,  0.5f,
-	-0.5f,  0.5f, -0.5f,
-	-0.5f, -0.5f, -0.5f,
-	-0.5f, -0.5f, -0.5f,
-	-0.5f, -0.5f,  0.5f,
-	-0.5f,  0.5f,  0.5f,
+	-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+	-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+	-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+	-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+	-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+	-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
 
-	 0.5f,  0.5f,  0.5f,
-	 0.5f,  0.5f, -0.5f,
-	 0.5f, -0.5f, -0.5f,
-	 0.5f, -0.5f, -0.5f,
-	 0.5f, -0.5f,  0.5f,
-	 0.5f,  0.5f,  0.5f,
+	 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+	 0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+	 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+	 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+	 0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+	 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
 
-	-0.5f, -0.5f, -0.5f,
-	 0.5f, -0.5f, -0.5f,
-	 0.5f, -0.5f,  0.5f,
-	 0.5f, -0.5f,  0.5f,
-	-0.5f, -0.5f,  0.5f,
-	-0.5f, -0.5f, -0.5f,
+	-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+	 0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+	 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+	 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+	-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
 
-	-0.5f,  0.5f, -0.5f,
-	 0.5f,  0.5f, -0.5f,
-	 0.5f,  0.5f,  0.5f,
-	 0.5f,  0.5f,  0.5f,
-	-0.5f,  0.5f,  0.5f,
-	-0.5f,  0.5f, -0.5f
+	-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+	 0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+	 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+	 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+	-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+	-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
 };
 
 // world space positions of our cubes
@@ -159,6 +178,8 @@ Window::Window ()
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 
+    glEnable(GL_DEPTH_TEST);
+
     glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
 
@@ -191,11 +212,15 @@ Window::Window ()
     /* reserve size of vertices buffer */
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
+    /* 6 float items per vertex, with a stride of 3 floats between vertices */
     GLuint posAttrib = glGetAttribLocation(shader_prog, "vertex");
-    /* 3 float items per vertex, with a stride of 3 floats between vertices */
-    glVertexAttribPointer(posAttrib, 3, 
-            GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
+    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), 0);
     glEnableVertexAttribArray(posAttrib);
+
+    /* normal attribute setup */
+    GLuint normAttrib = glGetAttribLocation(shader_prog, "norm");
+    glVertexAttribPointer(normAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(normAttrib);
 
     if (SDL_GL_SetSwapInterval(1) < 0)
         fprintf(stderr, "Warning: SwapInterval could not be set: %s\n", 
@@ -272,9 +297,12 @@ Window::render ()
         cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
     }
 
-
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glUniform3f(glGetUniformLocation(this->shader_prog, "objectColor"), 1.0f, 0.5, 0.31f);
+    glUniform3f(glGetUniformLocation(this->shader_prog, "lightColor"), 1.0f, 0.5, 0.31f);
+    glUniform3fv(glGetUniformLocation(this->shader_prog, "lightPos"), 1, &cameraPos[0]);
 
     glm::mat4 projection = glm::perspective(glm::radians(fov), (float)800 / (float)600, 0.1f, 100.0f);
     glUniformMatrix4fv(glGetUniformLocation(this->shader_prog, "projection"),
@@ -284,17 +312,29 @@ Window::render ()
     glUniformMatrix4fv(glGetUniformLocation(this->shader_prog, "view"),
             1, GL_FALSE, &view[0][0]);
 
-    for (int i = 0; i < 10; i++) {
-        // make sure to initialize matrix to identity matrix first
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, cubePositions[i]);
-        float angle = 20.0f * i;
-        model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-        glUniformMatrix4fv(glGetUniformLocation(this->shader_prog, "model"),
-                1, GL_FALSE, &model[0][0]);
+    for (int y = 0; y < 5; y++) {
+        for (int x = 0; x < 5; x++) {
+            glm::mat4 model = glm::mat4(1.0f);
+            glm::vec3 loc = glm::vec3(x * 1.2f, y * 1.2f, 0.0f);
+            model = glm::translate(model, loc);
+            glUniformMatrix4fv(glGetUniformLocation(this->shader_prog, "model"),
+                    1, GL_FALSE, &model[0][0]);
 
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
     }
+
+    //for (int i = 0; i < 10; i++) {
+    //    // make sure to initialize matrix to identity matrix first
+    //    glm::mat4 model = glm::mat4(1.0f);
+    //    model = glm::translate(model, cubePositions[i]);
+    //    float angle = 20.0f * i;
+    //    model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+    //    glUniformMatrix4fv(glGetUniformLocation(this->shader_prog, "model"),
+    //            1, GL_FALSE, &model[0][0]);
+
+    //    glDrawArrays(GL_TRIANGLES, 0, 36);
+    //}
 
     SDL_GL_SwapWindow(window);
 
