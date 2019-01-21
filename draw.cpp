@@ -248,25 +248,30 @@ Window::render ()
         case SDL_MOUSEMOTION:
             mouselook(e.motion.xrel, e.motion.yrel);
             break;
-
-        case SDL_KEYDOWN:
-            switch (e.key.keysym.sym) {
-            case SDLK_w:
-                cameraPos += cameraSpeed * cameraFront;
-                break;
-            case SDLK_s:
-                cameraPos -= cameraSpeed * cameraFront;
-                break;
-            case SDLK_a:
-                cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-                break;
-            case SDLK_d:
-                cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-                break;
-            }
-            break;
         }
     }
+
+    const Uint8 *state = SDL_GetKeyboardState(NULL);
+
+    /* Quit */
+    if (state[SDL_SCANCODE_ESCAPE]) {
+        return 0;
+    }
+
+    /* Movement */
+    if (state[SDL_SCANCODE_W]) {
+        cameraPos += cameraSpeed * cameraFront;
+    }
+    if (state[SDL_SCANCODE_S]) {
+        cameraPos -= cameraSpeed * cameraFront;
+    }
+    if (state[SDL_SCANCODE_A]) {
+        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    }
+    if (state[SDL_SCANCODE_D]) {
+        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    }
+
 
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
