@@ -109,8 +109,85 @@ static glm::vec3 cubePositions[] = {
 	glm::vec3(-1.3f,  1.0f, -1.5f)
 };
 
-inline int
-compile_shader (const char *src, int type)
+Shader::Shader ()
+    : vert_shader(0)
+    , frag_shader(0)
+    , shader_prog(0)
+{ }
+
+Shader::Shader (const char *vert_source, const char *frag_source)
+{
+    int status, maxlength;
+
+    this->vert_shader = compile_shader(vert_source, GL_VERTEX_SHADER);
+    this->frag_shader = compile_shader(frag_source, GL_FRAGMENT_SHADER);
+    this->shader_prog = glCreateProgram();
+
+    glAttachShader(shader_prog, vert_shader);
+    glAttachShader(shader_prog, frag_shader);
+    glLinkProgram(shader_prog);
+
+    /* check for linking errors */
+    glGetProgramiv(shader_prog, GL_LINK_STATUS, &status);
+    if (status != GL_TRUE) {
+        glGetProgramiv(shader_prog, GL_INFO_LOG_LENGTH, &maxlength);
+        if (maxlength > 0) {
+            char buffer[maxlength];
+            glGetProgramInfoLog(shader_prog, maxlength, NULL, buffer);
+            fprintf(stderr, "OpenGL shader failed to link: %s\n", buffer);
+            exit(1);
+        }
+    }
+}
+
+void
+Shader::use ()
+{
+    if (this->shader_prog == 0) {
+        fprintf(stderr, "Shader is not initialized or may have been destroyed.\n");
+        exit(1);
+    }
+    glUseProgram(this->shader_prog);
+}
+
+void
+Shader::destroy ()
+{
+    glDeleteShader(this->vert_shader);
+    glDeleteShader(this->frag_shader);
+    glDeleteProgram(this->shader_prog);
+    this->vert_shader = 0;
+    this->frag_shader = 0;
+    this->shader_prog = 0;
+}
+
+GLuint
+Shader::get_attrib_loc (const char *name)
+{
+    return glGetAttribLocation(shader_prog, name);
+}
+
+void
+Shader::set_uniform_3f (const char *name, float x, float y, float z)
+{
+    glUniform3f(glGetUniformLocation(this->shader_prog, name), x, y, z);
+}
+
+void
+Shader::set_uniform_3fv (const char *name, glm::vec3 &vec)
+{
+    glUniform3fv(glGetUniformLocation(this->shader_prog, name), 1, &vec[0]);
+}
+
+void
+Shader::set_uniform_mat4fv (const char *name, glm::mat4 &matrix)
+{
+    glUniformMatrix4fv(glGetUniformLocation(this->shader_prog, name),
+            1, GL_FALSE, &matrix[0][0]);
+}
+
+GLuint
+Shader::compile_shader (const char *src, int type)
 {
     char buffer[512];
     int status, shader_id;
@@ -128,8 +205,6 @@ compile_shader (const char *src, int type)
 
 Window::Window ()
 {
-    int maxlength, status;
-
     this->deltaTime = 0.0f;
     this->lastFrame = 0.0f;
 
@@ -183,28 +258,9 @@ Window::Window ()
     glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
 
-    this->vert_shader = compile_shader(vertex_source, GL_VERTEX_SHADER);
-    this->frag_shader = compile_shader(fragment_source, GL_FRAGMENT_SHADER);
-    this->shader_prog = glCreateProgram();
+    this->shader = Shader(vertex_source, fragment_source);
+    this->shader.use();
 
-    glAttachShader(shader_prog, vert_shader);
-    glAttachShader(shader_prog, frag_shader);
-    glLinkProgram(shader_prog);
-
-    /* check for linking errors */
-    glGetProgramiv(shader_prog, GL_LINK_STATUS, &status);
-    if (status != GL_TRUE) {
-        glGetProgramiv(shader_prog, GL_INFO_LOG_LENGTH, &maxlength);
-        if (maxlength > 0) {
-            char buffer[maxlength];
-            glGetProgramInfoLog(shader_prog, maxlength, NULL, buffer);
-            fprintf(stderr, "OpenGL shader failed to link: %s\n", buffer);
-            exit(1);
-        }
-    }
-
-	/* use the shaders compiled above */
-    glUseProgram(this->shader_prog);
     /* Setup the buffer and attribute buffers so we can set values */
     glBindVertexArray(VAO);
 
@@ -213,12 +269,12 @@ Window::Window ()
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
     /* 6 float items per vertex, with a stride of 3 floats between vertices */
-    GLuint posAttrib = glGetAttribLocation(shader_prog, "vertex");
+    GLuint posAttrib = this->shader.get_attrib_loc("vertex");
     glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), 0);
     glEnableVertexAttribArray(posAttrib);
 
     /* normal attribute setup */
-    GLuint normAttrib = glGetAttribLocation(shader_prog, "norm");
+    GLuint normAttrib = this->shader.get_attrib_loc("norm");
     glVertexAttribPointer(normAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(normAttrib);
 
@@ -231,9 +287,7 @@ Window::Window ()
 
 Window::~Window()
 {
-    glDeleteShader(this->vert_shader);
-    glDeleteShader(this->frag_shader);
-    glDeleteProgram(this->shader_prog);
+    this->shader.destroy();
 	glDeleteBuffers(1, &this->VBO);
 	glDeleteBuffers(1, &this->VAO);
     SDL_GL_DeleteContext(this->glContext);
@@ -300,25 +354,22 @@ Window::render ()
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glUniform3f(glGetUniformLocation(this->shader_prog, "objectColor"), 1.0f, 0.5, 0.31f);
-    glUniform3f(glGetUniformLocation(this->shader_prog, "lightColor"), 1.0f, 0.5, 0.31f);
-    glUniform3fv(glGetUniformLocation(this->shader_prog, "lightPos"), 1, &cameraPos[0]);
+    this->shader.set_uniform_3f("objectColor", 1.0f, 0.5f, 0.31f);
+    this->shader.set_uniform_3f("lightColor", 1.0f, 0.5f, 0.31f);
+    this->shader.set_uniform_3fv("lightPos", cameraPos);
 
     glm::mat4 projection = glm::perspective(glm::radians(fov), (float)800 / (float)600, 0.1f, 100.0f);
-    glUniformMatrix4fv(glGetUniformLocation(this->shader_prog, "projection"),
-            1, GL_FALSE, &projection[0][0]);
+    this->shader.set_uniform_mat4fv("projection", projection);
 
     glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-    glUniformMatrix4fv(glGetUniformLocation(this->shader_prog, "view"),
-            1, GL_FALSE, &view[0][0]);
+    this->shader.set_uniform_mat4fv("view", view);
 
     for (int y = 0; y < 5; y++) {
         for (int x = 0; x < 5; x++) {
             glm::mat4 model = glm::mat4(1.0f);
             glm::vec3 loc = glm::vec3(x * 1.2f, y * 1.2f, 0.0f);
             model = glm::translate(model, loc);
-            glUniformMatrix4fv(glGetUniformLocation(this->shader_prog, "model"),
-                    1, GL_FALSE, &model[0][0]);
+            this->shader.set_uniform_mat4fv("model", model);
 
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
