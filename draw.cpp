@@ -174,13 +174,13 @@ Shader::set_uniform_3f (const char *name, float x, float y, float z)
 }
 
 void
-Shader::set_uniform_3fv (const char *name, glm::vec3 &vec)
+Shader::set_uniform_3fv (const char *name, glm::vec3 vec)
 {
     glUniform3fv(glGetUniformLocation(this->shader_prog, name), 1, &vec[0]);
 }
 
 void
-Shader::set_uniform_mat4fv (const char *name, glm::mat4 &matrix)
+Shader::set_uniform_mat4fv (const char *name, glm::mat4 matrix)
 {
     glUniformMatrix4fv(glGetUniformLocation(this->shader_prog, name),
             1, GL_FALSE, &matrix[0][0]);
@@ -203,16 +203,19 @@ Shader::compile_shader (const char *src, int type)
     return shader_id;
 }
 
-Window::Window ()
+Camera::Camera ()
 {
-    this->deltaTime = 0.0f;
-    this->lastFrame = 0.0f;
+}
 
+Camera::Camera (int screen_x, int screen_y)
+{
+    this->screen_x = screen_x;
+    this->screen_y = screen_y;
+
+    this->position = glm::vec3(0.0f, 0.0f, 3.0f);
+    this->front = glm::vec3(0.0f, 0.0f, -1.0f);
+    this->up = glm::vec3(0.0f, 1.0f, 0.0f);
     this->fov = 45.0f;
-    this->cameraPos   = glm::vec3(0.0f, 0.0f, 3.0f);
-    this->cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-    this->cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
-
     /* 
      * yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a
      * direction vector pointing to the right so we initially rotate a bit to
@@ -220,6 +223,70 @@ Window::Window ()
      */
     this->yaw   = -90.0f;
     this->pitch =  0.0f;
+}
+
+void
+Camera::mouselook (float xrel, float yrel)
+{
+    static const float sensitivity = 0.1f;
+    glm::vec3 f;
+
+    this->yaw += xrel * sensitivity;
+    /* negate yrel to make up go up and down go down */ 
+    this->pitch += -yrel * sensitivity;
+
+    f.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    f.y = sin(glm::radians(pitch));
+    f.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    this->front = glm::normalize(f);
+}
+
+void
+Camera::move (CameraDir dir, float delta)
+{
+    float speed = 5.0 * delta;
+    switch (dir) {
+        case FORWARD:
+            position += speed * front;
+            break;
+        case BACKWARD:
+            position -= speed * front;
+            break;
+        case LEFT:
+            position -= glm::normalize(glm::cross(front, up)) * speed;
+            break;
+        case RIGHT:
+            position += glm::normalize(glm::cross(front, up)) * speed;
+            break;
+    }
+}
+
+glm::mat4
+Camera::projection ()
+{
+    return glm::perspective(glm::radians(fov), (float)screen_x / (float)screen_y, 0.1f, 100.0f);
+}
+
+glm::mat4
+Camera::view ()
+{
+    return glm::lookAt(position, position + front, up);
+}
+
+glm::vec3
+Camera::pos ()
+{
+    return position;
+}
+
+Window::Window ()
+{
+    this->should_quit = false;
+
+    this->delta_time = 0.0f;
+    this->last_frame = 0.0f;
+
+    this->camera = Camera(800, 600);
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         fprintf(stderr, "SDL Failed to init: %s\n", SDL_GetError());
@@ -295,37 +362,30 @@ Window::~Window()
     SDL_Quit();
 }
 
-void
-Window::mouselook (float xrel, float yrel)
+bool
+Window::should_close ()
 {
-
-    static const float sensitivity = 0.1f;
-    yaw += xrel * sensitivity;
-    /* negate yrel to make up go up and down go down */ 
-    pitch += -yrel * sensitivity;
-
-    glm::vec3 front;
-    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    front.y = sin(glm::radians(pitch));
-    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    cameraFront = glm::normalize(front);
+    return this->should_quit;
 }
 
 int
 Window::render ()
 {
     unsigned long currentFrame = SDL_GetTicks();
-    this->deltaTime = currentFrame - this->lastFrame;
-    this->lastFrame = currentFrame;
+
+    this->delta_time = currentFrame - this->last_frame;
+    this->last_frame = currentFrame;
     
-    float cameraSpeed = 5.0 * ((float)this->deltaTime * 0.001);
+    float delta = ((float)this->delta_time * 0.001);
+
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
         case SDL_QUIT:
-            return 0;
+            should_quit = true;
+            break;
 
         case SDL_MOUSEMOTION:
-            mouselook(e.motion.xrel, e.motion.yrel);
+            camera.mouselook(e.motion.xrel, e.motion.yrel);
             break;
         }
     }
@@ -334,21 +394,21 @@ Window::render ()
 
     /* Quit */
     if (state[SDL_SCANCODE_ESCAPE]) {
-        return 0;
+        should_quit = true;
     }
 
     /* Movement */
     if (state[SDL_SCANCODE_W]) {
-        cameraPos += cameraSpeed * cameraFront;
+        camera.move(FORWARD, delta);
     }
     if (state[SDL_SCANCODE_S]) {
-        cameraPos -= cameraSpeed * cameraFront;
+        camera.move(BACKWARD, delta);
     }
     if (state[SDL_SCANCODE_A]) {
-        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        camera.move(LEFT, delta);
     }
     if (state[SDL_SCANCODE_D]) {
-        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        camera.move(RIGHT, delta);
     }
 
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -356,13 +416,11 @@ Window::render ()
 
     this->shader.set_uniform_3f("objectColor", 1.0f, 0.5f, 0.31f);
     this->shader.set_uniform_3f("lightColor", 1.0f, 0.5f, 0.31f);
-    this->shader.set_uniform_3fv("lightPos", cameraPos);
+    this->shader.set_uniform_3fv("lightPos", this->camera.pos());
 
-    glm::mat4 projection = glm::perspective(glm::radians(fov), (float)800 / (float)600, 0.1f, 100.0f);
-    this->shader.set_uniform_mat4fv("projection", projection);
+    this->shader.set_uniform_mat4fv("projection", this->camera.projection());
 
-    glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-    this->shader.set_uniform_mat4fv("view", view);
+    this->shader.set_uniform_mat4fv("view", this->camera.view());
 
     for (int y = 0; y < 5; y++) {
         for (int x = 0; x < 5; x++) {

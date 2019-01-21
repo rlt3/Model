@@ -5,8 +5,9 @@ main (int argc, char **argv)
 {
     Window window;
 
-    while(window.render())
-    { }
+    while (!window.should_close()) {
+        window.render();
+    }
 
     return 0;
 }
