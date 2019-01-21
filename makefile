@@ -1,4 +1,4 @@
-CFLAGS=-Wall -g -ggdb
+CFLAGS=-Wall -g -ggdb -std=c++11
 LDFLAGS=-lSDL2 -lGL -lGLU -lm
 
 all:

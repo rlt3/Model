@@ -35,13 +35,16 @@ enum CameraDir {
 class Camera {
 public:
     Camera ();
-
     Camera (int screen_x, int screen_y);
 
+    /* using mouse's relative position to look in 3D-space */
     void mouselook (float xrel, float yrel);
+    /* move camera across the 3D space along a 2D plane */
     void move (CameraDir dir, float delta);
 
+    /* projection matrix (where field of view is setup) */
     glm::mat4 projection ();
+    /* the view the camera has in 3D space */
     glm::mat4 view ();
     glm::vec3 pos ();
 
@@ -53,9 +56,9 @@ protected:
     float pitch;
     float fov;
 
-    glm::vec3 position;
-    glm::vec3 front;
-    glm::vec3 up;
+    glm::vec3 position; /* coordinates of the camera in the 3d plane */
+    glm::vec3 front; /* where the camera is looking in 3d space */
+    glm::vec3 up; /* a normal pointing up to normalize movement on 2d plane */
 };
 
 class Window {
@@ -69,7 +72,7 @@ public:
     void draw_cube (float x, float y, float z);
     
     /* Clear the window, draw the internal objects, and flip */
-    int render ();
+    void render ();
 
 protected:
     bool should_quit;

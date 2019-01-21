@@ -51,7 +51,7 @@ static const GLchar* fragment_source =
     "   FragColor = vec4(result, 1.0);\n"
     "}";
 
-static float vertices[] = {
+static const float vertices[] = {
 	-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
 	 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
 	 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
@@ -95,20 +95,6 @@ static float vertices[] = {
 	-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
 };
 
-// world space positions of our cubes
-static glm::vec3 cubePositions[] = {
-	glm::vec3( 0.0f,  0.0f,  0.0f),
-	glm::vec3( 2.0f,  5.0f, -15.0f),
-	glm::vec3(-1.5f, -2.2f, -2.5f),
-	glm::vec3(-3.8f, -2.0f, -12.3f),
-	glm::vec3( 2.4f, -0.4f, -3.5f),
-	glm::vec3(-1.7f,  3.0f, -7.5f),
-	glm::vec3( 1.3f, -2.0f, -2.5f),
-	glm::vec3( 1.5f,  2.0f, -2.5f),
-	glm::vec3( 1.5f,  0.2f, -1.5f),
-	glm::vec3(-1.3f,  1.0f, -1.5f)
-};
-
 Shader::Shader ()
     : vert_shader(0)
     , frag_shader(0)
@@ -144,7 +130,7 @@ void
 Shader::use ()
 {
     if (this->shader_prog == 0) {
-        fprintf(stderr, "Shader is not initialized or may have been destroyed.\n");
+        fprintf(stderr, "Shader not initialized or may have been destroyed.\n");
         exit(1);
     }
     glUseProgram(this->shader_prog);
@@ -204,26 +190,23 @@ Shader::compile_shader (const char *src, int type)
 }
 
 Camera::Camera ()
-{
-}
+    : screen_x(0)
+    , screen_y(0)
+    , yaw(0)
+    , pitch(0)
+    , fov(0)
+{ }
 
 Camera::Camera (int screen_x, int screen_y)
-{
-    this->screen_x = screen_x;
-    this->screen_y = screen_y;
-
-    this->position = glm::vec3(0.0f, 0.0f, 3.0f);
-    this->front = glm::vec3(0.0f, 0.0f, -1.0f);
-    this->up = glm::vec3(0.0f, 1.0f, 0.0f);
-    this->fov = 45.0f;
-    /* 
-     * yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a
-     * direction vector pointing to the right so we initially rotate a bit to
-     * the left.
-     */
-    this->yaw   = -90.0f;
-    this->pitch =  0.0f;
-}
+    : screen_x(screen_x)
+    , screen_y(screen_y)
+    , yaw(-90.0f) /* rotate to point left instead of right, initially */
+    , pitch(0.0f)
+    , fov(45.0f)
+    , position(glm::vec3(0.0f, 0.0f, 3.0f))
+    , front(glm::vec3(0.0f, 0.0f, -1.0f))
+    , up(glm::vec3(0.0f, 1.0f, 0.0f))
+{ }
 
 void
 Camera::mouselook (float xrel, float yrel)
@@ -264,7 +247,8 @@ Camera::move (CameraDir dir, float delta)
 glm::mat4
 Camera::projection ()
 {
-    return glm::perspective(glm::radians(fov), (float)screen_x / (float)screen_y, 0.1f, 100.0f);
+    return glm::perspective(glm::radians(fov), 
+            (float)screen_x / (float)screen_y, 0.1f, 100.0f);
 }
 
 glm::mat4
@@ -280,13 +264,14 @@ Camera::pos ()
 }
 
 Window::Window ()
+    : should_quit(false)
+    , delta_time(0.0f)
+    , last_frame(0.0f)
+    , camera(Camera(800, 600))
 {
-    this->should_quit = false;
+    GLuint vertex_id, norm_id;
 
-    this->delta_time = 0.0f;
-    this->last_frame = 0.0f;
-
-    this->camera = Camera(800, 600);
+    object_positions.reserve(50);
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         fprintf(stderr, "SDL Failed to init: %s\n", SDL_GetError());
@@ -304,9 +289,6 @@ Window::Window ()
         exit(1);
     }
 
-    /* 
-     * Mix OpenGL and SDL draw calls at your own peril.
-     */
     this->glContext = SDL_GL_CreateContext(window);
     if (!this->glContext) {
         printf("Could not create OpenGL context: %s\n", SDL_GetError());
@@ -335,15 +317,17 @@ Window::Window ()
     /* reserve size of vertices buffer */
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    /* 6 float items per vertex, with a stride of 3 floats between vertices */
-    GLuint posAttrib = this->shader.get_attrib_loc("vertex");
-    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), 0);
-    glEnableVertexAttribArray(posAttrib);
+    /* setup vertices attribute, width of 3 in span of 6 elements */
+    vertex_id = this->shader.get_attrib_loc("vertex");
+    glVertexAttribPointer(vertex_id, 3,
+                GL_FLOAT, GL_FALSE, 6 * sizeof(float), 0);
+    glEnableVertexAttribArray(vertex_id);
 
-    /* normal attribute setup */
-    GLuint normAttrib = this->shader.get_attrib_loc("norm");
-    glVertexAttribPointer(normAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(normAttrib);
+    /* setup normal attribute, width of 3, 3 elements into span of 6 elements */
+    norm_id = this->shader.get_attrib_loc("norm");
+    glVertexAttribPointer(norm_id, 3, GL_FLOAT,
+                GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(norm_id);
 
     if (SDL_GL_SetSwapInterval(1) < 0)
         fprintf(stderr, "Warning: SwapInterval could not be set: %s\n", 
@@ -368,15 +352,23 @@ Window::should_close ()
     return this->should_quit;
 }
 
-int
+void
+Window::draw_cube (float x, float y, float z)
+{
+    object_positions.push_back(glm::vec3(x, y, z));
+}
+
+void
 Window::render ()
 {
-    unsigned long currentFrame = SDL_GetTicks();
+    const Uint8 *state;
+    unsigned long current_frame;
+    float delta;
 
-    this->delta_time = currentFrame - this->last_frame;
-    this->last_frame = currentFrame;
-    
-    float delta = ((float)this->delta_time * 0.001);
+    current_frame = SDL_GetTicks();
+    this->delta_time = current_frame - this->last_frame;
+    this->last_frame = current_frame;
+    delta = ((float)this->delta_time * 0.001);
 
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
@@ -390,7 +382,7 @@ Window::render ()
         }
     }
 
-    const Uint8 *state = SDL_GetKeyboardState(NULL);
+    state = SDL_GetKeyboardState(NULL);
 
     /* Quit */
     if (state[SDL_SCANCODE_ESCAPE]) {
@@ -416,36 +408,18 @@ Window::render ()
 
     this->shader.set_uniform_3f("objectColor", 1.0f, 0.5f, 0.31f);
     this->shader.set_uniform_3f("lightColor", 1.0f, 0.5f, 0.31f);
-    this->shader.set_uniform_3fv("lightPos", this->camera.pos());
 
     this->shader.set_uniform_mat4fv("projection", this->camera.projection());
-
+    this->shader.set_uniform_3fv("lightPos", this->camera.pos());
     this->shader.set_uniform_mat4fv("view", this->camera.view());
 
-    for (int y = 0; y < 5; y++) {
-        for (int x = 0; x < 5; x++) {
-            glm::mat4 model = glm::mat4(1.0f);
-            glm::vec3 loc = glm::vec3(x * 1.2f, y * 1.2f, 0.0f);
-            model = glm::translate(model, loc);
-            this->shader.set_uniform_mat4fv("model", model);
-
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-        }
+    for (auto &loc : object_positions) {
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, loc);
+        this->shader.set_uniform_mat4fv("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
     }
-
-    //for (int i = 0; i < 10; i++) {
-    //    // make sure to initialize matrix to identity matrix first
-    //    glm::mat4 model = glm::mat4(1.0f);
-    //    model = glm::translate(model, cubePositions[i]);
-    //    float angle = 20.0f * i;
-    //    model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-    //    glUniformMatrix4fv(glGetUniformLocation(this->shader_prog, "model"),
-    //            1, GL_FALSE, &model[0][0]);
-
-    //    glDrawArrays(GL_TRIANGLES, 0, 36);
-    //}
+    object_positions.clear();
 
     SDL_GL_SwapWindow(window);
-
-    return 1;
 }
