@@ -202,8 +202,7 @@ Camera::Camera (int screen_x, int screen_y)
     , screen_y(screen_y)
     , yaw(-90.0f) /* rotate to point left instead of right, initially */
     , pitch(0.0f)
-    , fov(90.0f)
-    //, fov(45.0f)
+    , fov(45.0f)
     , position(glm::vec3(0.0f, 0.0f, 3.0f))
     , front(glm::vec3(0.0f, 0.0f, -1.0f))
     , up(glm::vec3(0.0f, 1.0f, 0.0f))
@@ -255,7 +254,7 @@ glm::mat4
 Camera::projection ()
 {
     return glm::perspective(glm::radians(fov), 
-            (float)screen_x / (float)screen_y, 0.1f, 100.0f);
+            (float)screen_x / (float)screen_y, 0.1f, 1000.0f);
 }
 
 glm::mat4
