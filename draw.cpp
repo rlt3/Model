@@ -333,7 +333,7 @@ Window::Window ()
         fprintf(stderr, "Warning: SwapInterval could not be set: %s\n", 
                 SDL_GetError());
 
-    SDL_SetRelativeMouseMode(SDL_TRUE);
+    //SDL_SetRelativeMouseMode(SDL_TRUE);
 }
 
 Window::~Window()
@@ -359,7 +359,7 @@ Window::draw_cube (float x, float y, float z)
 }
 
 void
-Window::render ()
+Window::handle_input ()
 {
     const Uint8 *state;
     unsigned long current_frame;
@@ -368,6 +368,7 @@ Window::render ()
     current_frame = SDL_GetTicks();
     this->delta_time = current_frame - this->last_frame;
     this->last_frame = current_frame;
+    /* time is in miliseconds, dividing by one-thousandth gets delta as float */
     delta = ((float)this->delta_time * 0.001);
 
     while (SDL_PollEvent(&e)) {
@@ -389,6 +390,8 @@ Window::render ()
         should_quit = true;
     }
 
+    SDL_SetRelativeMouseMode((SDL_bool) state[SDL_SCANCODE_LSHIFT]);
+
     /* Movement */
     if (state[SDL_SCANCODE_W]) {
         camera.move(FORWARD, delta);
@@ -402,9 +405,15 @@ Window::render ()
     if (state[SDL_SCANCODE_D]) {
         camera.move(RIGHT, delta);
     }
+}
 
+void
+Window::render ()
+{
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     this->shader.set_uniform_3f("objectColor", 1.0f, 0.5f, 0.31f);
     this->shader.set_uniform_3f("lightColor", 1.0f, 0.5f, 0.31f);

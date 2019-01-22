@@ -68,6 +68,8 @@ public:
 
     bool should_close ();
 
+    void handle_input ();
+
     /* Give info about what to draw and where */
     void draw_cube (float x, float y, float z);
     
