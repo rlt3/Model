@@ -219,6 +219,12 @@ Camera::mouselook (float xrel, float yrel)
     /* negate yrel to make up go up and down go down */ 
     this->pitch += -yrel * sensitivity;
 
+    /* clamp pitch so that the camera doesn't flip */
+    if (pitch > 89.0f)
+        pitch = 89.0f;
+    if (pitch < -89.0f)
+        pitch = -89.0f;
+
     f.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
     f.y = sin(glm::radians(pitch));
     f.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));

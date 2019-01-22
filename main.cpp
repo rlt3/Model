@@ -109,7 +109,7 @@ main (int argc, char **argv)
         for (int y = 0; y < BOARD_Y; y++)
             for (int x = 0; x < BOARD_X; x++)
                 if (curr_board[y][x])
-                    window.draw_cube(x, y, 0.0f);
+                    window.draw_cube(x, 0.0f, y);
 
         if (window.get_ticks() - last_time > PERIOD) {
             step_board();
