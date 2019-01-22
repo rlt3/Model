@@ -202,7 +202,8 @@ Camera::Camera (int screen_x, int screen_y)
     , screen_y(screen_y)
     , yaw(-90.0f) /* rotate to point left instead of right, initially */
     , pitch(0.0f)
-    , fov(45.0f)
+    , fov(90.0f)
+    //, fov(45.0f)
     , position(glm::vec3(0.0f, 0.0f, 3.0f))
     , front(glm::vec3(0.0f, 0.0f, -1.0f))
     , up(glm::vec3(0.0f, 1.0f, 0.0f))
@@ -227,7 +228,7 @@ Camera::mouselook (float xrel, float yrel)
 void
 Camera::move (CameraDir dir, float delta)
 {
-    float speed = 5.0 * delta;
+    float speed = 20.0 * delta;
     switch (dir) {
         case FORWARD:
             position += speed * front;
@@ -356,6 +357,12 @@ void
 Window::draw_cube (float x, float y, float z)
 {
     object_positions.push_back(glm::vec3(x, y, z));
+}
+
+unsigned long
+Window::get_ticks ()
+{
+    return SDL_GetTicks();
 }
 
 void

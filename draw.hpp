@@ -66,6 +66,8 @@ public:
     Window ();
     ~Window ();
 
+    unsigned long get_ticks ();
+
     bool should_close ();
 
     void handle_input ();
