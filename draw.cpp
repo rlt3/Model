@@ -268,8 +268,8 @@ Window::Window ()
     : should_quit(false)
     , delta_time(0.0f)
     , last_frame(0.0f)
-    , camera(Camera(800, 600))
 {
+    SDL_DisplayMode display;
     GLuint vertex_id, norm_id;
 
     object_positions.reserve(50);
@@ -281,14 +281,18 @@ Window::Window ()
 
     this->window = SDL_CreateWindow("Model", 
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
-        800, 600, 
-        SDL_WINDOW_OPENGL);
+        800, 600, /* these won't be used if FULLSCREEN is given below */
+        SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN_DESKTOP);
 
     if (!this->window) {
         fprintf(stderr, "Window could not be created: %s\n", SDL_GetError());
         SDL_Quit();
         exit(1);
     }
+
+    /* Get screen width and height since we're in fullscreen */
+    SDL_GetCurrentDisplayMode(0, &display);
+    this->camera = Camera(display.w, display.h);
 
     this->glContext = SDL_GL_CreateContext(window);
     if (!this->glContext) {
@@ -333,8 +337,6 @@ Window::Window ()
     if (SDL_GL_SetSwapInterval(1) < 0)
         fprintf(stderr, "Warning: SwapInterval could not be set: %s\n", 
                 SDL_GetError());
-
-    //SDL_SetRelativeMouseMode(SDL_TRUE);
 }
 
 Window::~Window()
@@ -392,12 +394,12 @@ Window::handle_input ()
 
     state = SDL_GetKeyboardState(NULL);
 
+    SDL_SetRelativeMouseMode((SDL_bool) state[SDL_SCANCODE_LSHIFT]);
+
     /* Quit */
     if (state[SDL_SCANCODE_ESCAPE]) {
         should_quit = true;
     }
-
-    SDL_SetRelativeMouseMode((SDL_bool) state[SDL_SCANCODE_LSHIFT]);
 
     /* Movement */
     if (state[SDL_SCANCODE_W]) {
