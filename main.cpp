@@ -2,23 +2,23 @@
 #include <time.h>
 #include "draw.hpp"
 
-#define BOARD_X   120
-#define BOARD_Y   80
+#define BOARD_X   50
+#define BOARD_Y   50
+#define BOARD_Z   50
 #define LIVE      1
 #define DEAD      0
-#define WHITE     1.0f, 1.0f, 1.0f, 1.0f
-#define BLACK       0,   0,   0, 1.0f
 #define PERIOD 	  250
 
-static int curr_board[BOARD_Y][BOARD_X];
-static int next_board[BOARD_Y][BOARD_X];
+static int curr_board[BOARD_X][BOARD_Y][BOARD_Z];
+static int next_board[BOARD_X][BOARD_Y][BOARD_Z];
 
 void
 init_board ()
 {
-    for (int y = 0; y < BOARD_Y; y++)
-        for (int x = 0; x < BOARD_X; x++)
-            curr_board[y][x] = rand() % 2;
+    for (int x = 0; x < BOARD_X; x++)
+        for (int y = 0; y < BOARD_Y; y++)
+            for (int z = 0; z < BOARD_Z; z++)
+                curr_board[y][x][z] = rand() % 2;
 }
 
 /*
@@ -26,35 +26,46 @@ init_board ()
  * so edges & corners will have less possible neighbors.
  */
 int
-cell_neighbors (int x, int y, int type)
+cell_neighbors (int x, int y, int z, int type)
 {
     int neighbors = 0;
 
-    /* top */
-    if (y > 0 && curr_board[y - 1][x] == type)
-            neighbors++;
-    /* right */
-    if (x < BOARD_X && curr_board[y][x + 1] == type)
-            neighbors++;
-    /* bottom */
-    if (y < BOARD_Y && curr_board[y + 1][x] == type)
-            neighbors++;
-    /* left */
-    if (x > 0 && curr_board[y][x - 1] == type)
+    for (int dy = y - 1; dy <= y + 1; dy++) {
+        if (dy < 0)
+            continue;
+        if (dy > BOARD_Y)
+            continue;
+
+        /* center */
+        if (dy != y && curr_board[x][dy][z] == type)
             neighbors++;
 
-    /* top left */
-    if ((x > 0 && y > 0) && curr_board[y - 1][x - 1] == type)
-            neighbors++;
-    /* top right */
-    if ((x < BOARD_X && y > 0) && curr_board[y - 1][x + 1] == type)
-            neighbors++;
-    /* bottom right */
-    if ((x < BOARD_X && y < BOARD_Y) && curr_board[y + 1][x + 1] == type)
-            neighbors++;
-    /* bottom left */
-    if ((x > 0 && y < BOARD_Y) && curr_board[y + 1][x - 1] == type)
-            neighbors++;
+        /* top */
+        if (z < BOARD_Z && curr_board[x][dy][z + 1] == type)
+                neighbors++;
+        /* right */
+        if (x < BOARD_X && curr_board[x + 1][dy][z] == type)
+                neighbors++;
+        /* bottom */
+        if (z > 0 && curr_board[x][dy][z - 1] == type)
+                neighbors++;
+        /* left */
+        if (x > 0 && curr_board[x - 1][dy][z] == type)
+                neighbors++;
+
+        /* top left */
+        if ((x > 0 && z < BOARD_Z) && curr_board[x - 1][dy][z + 1] == type)
+                neighbors++;
+        /* top right */
+        if (x < BOARD_X && z < BOARD_Z && curr_board[x + 1][dy][z + 1] == type)
+                neighbors++;
+        /* bottom right */
+        if (x < BOARD_X && z > 0 && curr_board[x + 1][dy][z - 1] == type)
+                neighbors++;
+        /* bottom left */
+        if (x > 0 && z > 0 && curr_board[x - 1][dy][z - 1] == type)
+                neighbors++;
+    }
 
     return neighbors;
 }
@@ -64,35 +75,22 @@ step_board ()
 {
     int neighbors;
 
-    for (int y = 0; y < BOARD_Y; y++) {
-        for (int x = 0; x < BOARD_X; x++) {
-            neighbors = cell_neighbors(x, y, LIVE);
-            if (curr_board[y][x]) {
-                /* 
-                 * Any live cell with fewer than two live neighbours dies, as
-                 * if caused by under-population. Any live cell with more than
-                 * three live neighbours dies, as if by over-population.
-                 */
-                if (neighbors < 2 || neighbors > 3)
-                    next_board[y][x] = 0;
-                /* 
-                 * Any live cell with two or three live neighbours lives on to
-                 * the next generation.
-                 */
-                else
-                    next_board[y][x] = 1;
-            } 
-            /* 
-             * Any dead cell with exactly three live neighbours becomes a live
-             * cell, as if by reproduction.
-             */
-            else if (neighbors == 3) {
-                next_board[y][x] = 1;
+    for (int x = 0; x < BOARD_X; x++) {
+        for (int y = 0; y < BOARD_Y; y++) {
+            for (int z = 0; z < BOARD_Z; z++) {
+                neighbors = cell_neighbors(x, y, z, LIVE);
+                if (curr_board[y][x][z]) {
+                    if (neighbors > 18)
+                        next_board[y][x][z] = 0;
+                } 
+                else if (neighbors < 6) {
+                    next_board[y][x][z] = 1;
+                }
             }
         }
     }
 
-    memcpy(curr_board, next_board, BOARD_Y * BOARD_X * sizeof(int));
+    memcpy(curr_board, next_board, BOARD_X * BOARD_Y * BOARD_Z * sizeof(int));
 }
 
 int
@@ -108,8 +106,9 @@ main (int argc, char **argv)
         window.handle_input();
         for (int y = 0; y < BOARD_Y; y++)
             for (int x = 0; x < BOARD_X; x++)
-                if (curr_board[y][x])
-                    window.draw_cube(x, 0.0f, y);
+                for (int z = 0; z < BOARD_Z; z++)
+                    if (curr_board[y][x][z])
+                        window.draw_cube(x, y, z);
 
         if (window.get_ticks() - last_time > PERIOD) {
             step_board();

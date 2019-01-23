@@ -233,7 +233,7 @@ Camera::mouselook (float xrel, float yrel)
 void
 Camera::move (CameraDir dir, float delta)
 {
-    float speed = 20.0 * delta;
+    float speed = 50.0 * delta;
     switch (dir) {
         case FORWARD:
             position += speed * front;
@@ -427,7 +427,7 @@ Window::render ()
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     this->shader.set_uniform_3f("objectColor", 1.0f, 0.5f, 0.31f);
     this->shader.set_uniform_3f("lightColor", 1.0f, 0.5f, 0.31f);
