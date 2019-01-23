@@ -102,6 +102,8 @@ main (int argc, char **argv)
     srand(time(NULL));
     init_board();
 
+    window.camera_pos(125, 25, 25, 180);
+
     while (!window.should_close()) {
         window.handle_input();
         for (int y = 0; y < BOARD_Y; y++)

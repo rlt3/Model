@@ -206,6 +206,7 @@ Camera::Camera (int screen_x, int screen_y)
     , position(glm::vec3(0.0f, 0.0f, 3.0f))
     , front(glm::vec3(0.0f, 0.0f, -1.0f))
     , up(glm::vec3(0.0f, 1.0f, 0.0f))
+    , right(glm::vec3(1.0f, 0.0f, 0.0f))
 { }
 
 void
@@ -228,6 +229,15 @@ Camera::mouselook (float xrel, float yrel)
     f.y = sin(glm::radians(pitch));
     f.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
     this->front = glm::normalize(f);
+}
+
+void
+Camera::arcball (float xrel, float yrel)
+{
+    static const float sensitivity = 0.1f;
+
+    this->yaw += xrel * sensitivity;
+    this->pitch += -yrel * sensitivity;
 }
 
 void
@@ -260,13 +270,32 @@ Camera::projection ()
 glm::mat4
 Camera::view ()
 {
-    return glm::lookAt(position, position + front, up);
+    //return glm::lookAt(position, position + front, up);
+    
+    static const glm::vec4 target(0, 0, 0, 1.0f);
+    static const glm::mat4 m(1.0f);
+    glm::vec4 pos = glm::vec4(position.x, position.y, position.z, 1.0f);
+    glm::mat4 rot(1.0f);
+
+    rot = glm::rotate(rot, glm::radians(pitch), right);
+    rot = glm::rotate(rot, glm::radians(yaw), up);
+    pos = rot * (pos - target) + target;
+
+    return glm::lookAt(glm::vec3(pos), glm::vec3(target), up);
 }
 
 glm::vec3
 Camera::pos ()
 {
     return position;
+}
+
+void
+Camera::set_pos (glm::vec3 pos, float angle)
+{
+    position = pos;
+    yaw = angle;
+    mouselook(0, 0);
 }
 
 Window::Window ()
@@ -342,6 +371,11 @@ Window::Window ()
     if (SDL_GL_SetSwapInterval(1) < 0)
         fprintf(stderr, "Warning: SwapInterval could not be set: %s\n", 
                 SDL_GetError());
+
+    /*
+     * TODO: rewrite vertices in winding to use this for performance
+     * glEnable(GL_CULL_FACE);
+     */
 }
 
 Window::~Window()
@@ -358,6 +392,12 @@ bool
 Window::should_close ()
 {
     return this->should_quit;
+}
+
+void
+Window::camera_pos (float x, float y, float z, float angle)
+{
+    camera.set_pos(glm::vec3(x, y, z), angle);
 }
 
 void
@@ -392,7 +432,10 @@ Window::handle_input ()
             break;
 
         case SDL_MOUSEMOTION:
-            camera.mouselook(e.motion.xrel, e.motion.yrel);
+            if (e.button.button == SDL_BUTTON(SDL_BUTTON_LEFT)) {
+                //camera.mouselook(e.motion.xrel, e.motion.yrel);
+                camera.arcball(e.motion.xrel, e.motion.yrel);
+            }
             break;
         }
     }
@@ -428,7 +471,7 @@ Window::render ()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
+    
     this->shader.set_uniform_3f("objectColor", 1.0f, 0.5f, 0.31f);
     this->shader.set_uniform_3f("lightColor", 1.0f, 0.5f, 0.31f);
 
@@ -439,6 +482,7 @@ Window::render ()
     for (auto &loc : object_positions) {
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, loc);
+        //model = glm::rotate(model, (float)(SDL_GetTicks() * 0.001), glm::vec3(0, 0, 1));
         this->shader.set_uniform_mat4fv("model", model);
         glDrawArrays(GL_TRIANGLES, 0, 36);
     }

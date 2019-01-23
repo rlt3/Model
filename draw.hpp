@@ -1,4 +1,5 @@
 #pragma once
+#define GLM_SWIZZLE
 #include <vector>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
@@ -39,6 +40,9 @@ public:
 
     /* using mouse's relative position to look in 3D-space */
     void mouselook (float xrel, float yrel);
+
+    void arcball (float xrel, float yrel);
+
     /* move camera across the 3D space along a 2D plane */
     void move (CameraDir dir, float delta);
 
@@ -48,6 +52,8 @@ public:
     glm::mat4 view ();
     glm::vec3 pos ();
 
+    void set_pos (glm::vec3 pos, float angle);
+
 protected:
     int screen_x;
     int screen_y;
@@ -56,9 +62,11 @@ protected:
     float pitch;
     float fov;
 
+    glm::vec3 target;
     glm::vec3 position; /* coordinates of the camera in the 3d plane */
     glm::vec3 front; /* where the camera is looking in 3d space */
     glm::vec3 up; /* a normal pointing up to normalize movement on 2d plane */
+    glm::vec3 right; /* a normal pointing up to normalize movement on 2d plane */
 };
 
 class Window {
@@ -71,6 +79,8 @@ public:
     bool should_close ();
 
     void handle_input ();
+
+    void camera_pos (float x, float y, float z, float angle);
 
     /* Give info about what to draw and where */
     void draw_cube (float x, float y, float z);
