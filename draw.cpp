@@ -203,11 +203,13 @@ Camera::Camera (int screen_x, int screen_y)
     , yaw(-90.0f) /* rotate to point left instead of right, initially */
     , pitch(0.0f)
     , fov(45.0f)
-    , position(glm::vec3(0.0f, 0.0f, 3.0f))
+    , position(glm::vec4(0.0f, 0.0f, 3.0f, 1.0f))
     , front(glm::vec3(0.0f, 0.0f, -1.0f))
     , up(glm::vec3(0.0f, 1.0f, 0.0f))
     , right(glm::vec3(1.0f, 0.0f, 0.0f))
-{ }
+{
+    target = glm::vec4(25, 25, 25, 1.0f);
+}
 
 void
 Camera::mouselook (float xrel, float yrel)
@@ -236,8 +238,13 @@ Camera::arcball (float xrel, float yrel)
 {
     static const float sensitivity = 0.1f;
 
-    this->yaw += xrel * sensitivity;
+    this->yaw += -xrel * sensitivity;
     this->pitch += -yrel * sensitivity;
+
+    if (this->pitch > 89.0f)
+        this->pitch = 89.0f;
+    if (this->pitch < -89.0f)
+        this->pitch = -89.0f;
 }
 
 void
@@ -246,18 +253,32 @@ Camera::move (CameraDir dir, float delta)
     float speed = 50.0 * delta;
     switch (dir) {
         case FORWARD:
-            position += speed * front;
+            position.x -= speed;
             break;
         case BACKWARD:
-            position -= speed * front;
+            position.x += speed;
             break;
         case LEFT:
-            position -= glm::normalize(glm::cross(front, up)) * speed;
+            position.z += speed;
             break;
         case RIGHT:
-            position += glm::normalize(glm::cross(front, up)) * speed;
+            position.z -= speed;
             break;
     }
+    //switch (dir) {
+    //    case FORWARD:
+    //        position += speed * front;
+    //        break;
+    //    case BACKWARD:
+    //        position -= speed * front;
+    //        break;
+    //    case LEFT:
+    //        position -= glm::normalize(glm::cross(front, up)) * speed;
+    //        break;
+    //    case RIGHT:
+    //        position += glm::normalize(glm::cross(front, up)) * speed;
+    //        break;
+    //}
 }
 
 glm::mat4
@@ -272,30 +293,33 @@ Camera::view ()
 {
     //return glm::lookAt(position, position + front, up);
     
-    static const glm::vec4 target(0, 0, 0, 1.0f);
     static const glm::mat4 m(1.0f);
-    glm::vec4 pos = glm::vec4(position.x, position.y, position.z, 1.0f);
+    glm::vec4 pos = position;
     glm::mat4 rot(1.0f);
 
     rot = glm::rotate(rot, glm::radians(pitch), right);
     rot = glm::rotate(rot, glm::radians(yaw), up);
     pos = rot * (pos - target) + target;
 
-    return glm::lookAt(glm::vec3(pos), glm::vec3(target), up);
+    l_position = glm::vec3(pos);
+
+    return glm::lookAt(l_position, glm::vec3(target), up);
 }
 
 glm::vec3
 Camera::pos ()
 {
+    //return l_position;
     return position;
 }
 
 void
 Camera::set_pos (glm::vec3 pos, float angle)
 {
-    position = pos;
+    position = glm::vec4(pos.x, pos.y, pos.z, 1.0f);
+    l_position = position;
     yaw = angle;
-    mouselook(0, 0);
+    //mouselook(0, 0);
 }
 
 Window::Window ()

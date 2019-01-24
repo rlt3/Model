@@ -62,8 +62,9 @@ protected:
     float pitch;
     float fov;
 
-    glm::vec3 target;
-    glm::vec3 position; /* coordinates of the camera in the 3d plane */
+    glm::vec4 target;
+    glm::vec3 l_position; /* coordinates of the camera in the 3d plane */
+    glm::vec4 position; /* coordinates of the camera in the 3d plane */
     glm::vec3 front; /* where the camera is looking in 3d space */
     glm::vec3 up; /* a normal pointing up to normalize movement on 2d plane */
     glm::vec3 right; /* a normal pointing up to normalize movement on 2d plane */
