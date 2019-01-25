@@ -125,6 +125,7 @@ protected:
     unsigned long delta_time;
     unsigned long last_frame;
 
+    glm::vec3 placeholder;
     std::vector<glm::vec3> object_positions;
 
     Camera camera;

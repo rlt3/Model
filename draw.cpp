@@ -537,79 +537,17 @@ Window::get_ticks ()
     return SDL_GetTicks();
 }
 
-//gluUnProject(GLdouble winx, GLdouble winy, GLdouble winz,
-//  const GLdouble modelMatrix[16],
-//  const GLdouble projMatrix[16],
-//const GLint viewport[4],
-// GLdouble *objx, GLdouble *objy, GLdouble *objz)
-//{
-//	double finalMatrix[16];
-//	double in[4];
-//	double out[4];
-//	
-//	__gluMultMatricesd(modelMatrix, projMatrix, finalMatrix);
-//	if (!__gluInvertMatrixd(finalMatrix, finalMatrix)) return(GL_FALSE);
-//	
-//	in[0]=winx;
-//	in[1]=winy;
-//	in[2]=winz;
-//	in[3]=1.0;
-//	
-//	/* Map x and y from window coordinates */
-//	in[0] = (in[0] - viewport[0]) / viewport[2];
-//	in[1] = (in[1] - viewport[1]) / viewport[3];
-//	
-//	/* Map to range -1 to 1 */
-//	in[0] = in[0] * 2 - 1;
-//	in[1] = in[1] * 2 - 1;
-//	in[2] = in[2] * 2 - 1;
-//	
-//	__gluMultMatrixVecd(finalMatrix, in, out);
-//	if (out[3] == 0.0) return(GL_FALSE);
-//	out[0] /= out[3];
-//	out[1] /= out[3];
-//	out[2] /= out[3];
-//	*objx = out[0];
-//	*objy = out[1];
-//	*objz = out[2];
-//	return(GL_TRUE);
-//}
-
 glm::vec3
-get_coords_from_click (int x, int y,
-                      int width, int height,
-                      glm::mat4 view,
-                      glm::mat4 proj)
+get_coords_from_click (float x, float y,
+                       int width, int height,
+                       glm::mat4 view,
+                       glm::mat4 proj)
 {
     float depth;
-    glm::mat4 mat;
-    glm::vec4 in;
-    glm::vec4 out;
-
     glReadPixels(x, y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
-
-    mat = view * proj;
-    mat = glm::inverse(mat);
-
-    in.x = x;
-    in.y = y;
-    in.z = depth;
-    in.w = 1.f;
-
-    in.x = in.x / width;
-    in.y = in.y / height;
-
-    in.x = in.x * 2 - 1;
-    in.y = in.y * 2 - 1;
-    in.z = in.z * 2 - 1;
-
-    out = mat * in;
-
-    out.x /= out.w;
-    out.y /= out.w;
-    out.z /= out.w;
-
-    return glm::vec3(out);
+    glm::vec4 window(0.f, 0.f, width, height);
+    glm::vec3 mouse(x, height - 1.f - y, depth);
+    return glm::round(glm::unProject(mouse, view, proj, window));
 }
 
 void
@@ -625,8 +563,6 @@ Window::handle_input ()
     /* time is in miliseconds, dividing by one-thousandth gets delta as float */
     delta = ((float)this->delta_time * 0.001);
 
-    glm::vec3 coords;
-
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
         case SDL_QUIT:
@@ -634,13 +570,12 @@ Window::handle_input ()
             break;
 
         case SDL_MOUSEBUTTONDOWN:
-            coords = get_coords_from_click (e.button.x, e.button.y,
-                                            camera.screen_x, camera.screen_y,
-                                            camera.view(),
-                                            camera.projection());
-            printf("(%d, %d) -> (%f, %f, %f)\n",
-                    e.button.x, e.button.x,
-                    coords.x, coords.y, coords.z);
+            if (e.button.button == SDL_BUTTON_LEFT) {
+                /* place object */
+            }
+            if (e.button.button == SDL_BUTTON_RIGHT) {
+                /* remove object */
+            }
             break;
 
         case SDL_MOUSEWHEEL:
@@ -648,7 +583,11 @@ Window::handle_input ()
             break;
 
         case SDL_MOUSEMOTION:
-            if (e.button.button == SDL_BUTTON(SDL_BUTTON_LEFT)) {
+            placeholder = get_coords_from_click(e.button.x, e.button.y,
+                                            camera.screen_x, camera.screen_y,
+                                            camera.view(),
+                                            camera.projection());
+            if (e.button.button == SDL_BUTTON(SDL_BUTTON_MIDDLE)) {
                 camera.look(e.motion.xrel, e.motion.yrel);
             }
             break;
@@ -690,8 +629,6 @@ Window::render ()
 {
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     
     this->shader.set_uniform_3f("objectColor", 1.0f, 0.5f, 0.31f);
     this->shader.set_uniform_3f("lightColor", 1.0f, 0.5f, 0.31f);
@@ -708,6 +645,13 @@ Window::render ()
         glDrawArrays(GL_TRIANGLES, 0, 36);
     }
     object_positions.clear();
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, placeholder);
+    this->shader.set_uniform_mat4fv("model", model);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     SDL_GL_SwapWindow(window);
 }
