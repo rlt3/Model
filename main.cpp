@@ -112,10 +112,10 @@ main (int argc, char **argv)
                     if (curr_board[y][x][z])
                         window.draw_cube(x, y, z);
 
-        //if (window.get_ticks() - last_time > PERIOD) {
-        //    step_board();
-        //    last_time = window.get_ticks();
-        //}
+        if (window.get_ticks() - last_time > PERIOD) {
+            step_board();
+            last_time = window.get_ticks();
+        }
         window.render();
     }
 

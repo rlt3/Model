@@ -190,45 +190,99 @@ Shader::compile_shader (const char *src, int type)
 }
 
 Camera::Camera ()
-    : screen_x(0)
+    : mode(FPS)
+    , screen_x(0)
     , screen_y(0)
     , yaw(0)
     , pitch(0)
     , fov(0)
-    , zoom(0)
+    , zoomf(0)
+    , position(glm::vec4(0.0f, 0.0f, 3.0f, 1.0f))
+    , front(glm::vec3(0.0f, 0.0f, -1.0f))
+    , up(glm::vec3(0.0f, 1.0f, 0.0f))
+    , lefthand(glm::vec4(0.f, 0.f, -1.f, 1.f))
 { }
 
 Camera::Camera (int screen_x, int screen_y)
-    : screen_x(screen_x)
+    : mode(FPS)
+    , screen_x(screen_x)
     , screen_y(screen_y)
     , yaw(-90.0f) /* rotate to point left instead of right, initially */
     , pitch(0.0f)
     , fov(45.0f)
-    , zoom(0)
+    , zoomf(0)
     , position(glm::vec4(0.0f, 0.0f, 3.0f, 1.0f))
     , front(glm::vec3(0.0f, 0.0f, -1.0f))
     , up(glm::vec3(0.0f, 1.0f, 0.0f))
     , lefthand(glm::vec4(0.f, 0.f, -1.f, 1.f))
 {
     target = glm::vec4(25, 25, 25, 1.0f);
-    zoom = -250.f;
+    zoomf = -250.f;
+}
+
+Camera::Camera (int screen_x, int screen_y, CameraMode mode)
+    : mode(mode)
+    , screen_x(screen_x)
+    , screen_y(screen_y)
+    , yaw(-90.0f) /* rotate to point left instead of right, initially */
+    , pitch(0.0f)
+    , fov(45.0f)
+    , zoomf(0)
+    , position(glm::vec4(0.0f, 0.0f, 3.0f, 1.0f))
+    , front(glm::vec3(0.0f, 0.0f, -1.0f))
+    , up(glm::vec3(0.0f, 1.0f, 0.0f))
+    , lefthand(glm::vec4(0.f, 0.f, -1.f, 1.f))
+{
+    target = glm::vec4(25, 25, 25, 1.0f);
+    zoomf = -250.f;
+}
+
+/* zooming in and out of where one looks in 3D-space */
+void
+Camera::zoom (int increment)
+{
+    static const float speed = 5.f;
+    this->zoomf = glm::clamp(this->zoomf + speed * increment, -1000.f, 1000.f);
+}
+
+/* using x, y position to orient where one looks in 3D-space */
+void
+Camera::look (int x, int y)
+{
+    switch (mode) {
+        case FPS: fps_look(x, y); break;
+        case ARCBALL: arc_look(x, y); break;
+    }
+}
+
+/* move camera across the 3D space along a 2D plane */
+void
+Camera::move (CameraDir dir, float delta)
+{
+    switch (mode) {
+        case FPS: fps_move(dir, delta); break;
+        case ARCBALL: arc_move(dir, delta); break;
+    }
+}
+
+glm::mat4
+Camera::view ()
+{
+    switch (mode) {
+        case FPS: return fps_view();
+        default:
+        case ARCBALL: return arc_view();
+    }
 }
 
 void
-Camera::mouselook (float xrel, float yrel)
+Camera::fps_look (int x, int y)
 {
     static const float sensitivity = 0.1f;
     glm::vec3 f;
 
-    this->yaw += xrel * sensitivity;
-    /* negate yrel to make up go up and down go down */ 
-    this->pitch += -yrel * sensitivity;
-
-    /* clamp pitch so that the camera doesn't flip */
-    if (pitch > 89.0f)
-        pitch = 89.0f;
-    if (pitch < -89.0f)
-        pitch = -89.0f;
+    this->yaw = fmodf(this->yaw + (x * sensitivity), 360.f);
+    this->pitch = glm::clamp(this->pitch + -(y * sensitivity), -90.f, 90.f);
 
     f.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
     f.y = sin(glm::radians(pitch));
@@ -237,7 +291,15 @@ Camera::mouselook (float xrel, float yrel)
 }
 
 void
-Camera::move (CameraDir dir, float delta)
+Camera::arc_look (int x, int y)
+{
+    static const float sensitivity = 0.1f;
+    this->yaw = fmodf(this->yaw + (x * sensitivity), 360.f);
+    this->pitch = glm::clamp(this->pitch + -(y * sensitivity), -90.f, 90.f);
+}
+
+void
+Camera::arc_move (CameraDir dir, float delta)
 {
     float speed = 50.0 * delta;
     switch (dir) {
@@ -254,56 +316,66 @@ Camera::move (CameraDir dir, float delta)
             position.z -= speed;
             break;
     }
-    //switch (dir) {
-    //    case FORWARD:
-    //        position += speed * front;
-    //        break;
-    //    case BACKWARD:
-    //        position -= speed * front;
-    //        break;
-    //    case LEFT:
-    //        position -= glm::normalize(glm::cross(front, up)) * speed;
-    //        break;
-    //    case RIGHT:
-    //        position += glm::normalize(glm::cross(front, up)) * speed;
-    //        break;
-    //}
 }
 
 void
-Camera::arcball (int x, int y)
+Camera::fps_move (CameraDir dir, float delta)
 {
-    static const float sensitivity = 0.1f;
-    this->yaw = fmodf(this->yaw + (x * sensitivity), 360.f);
-    this->pitch = glm::clamp(this->pitch + -(y * sensitivity), -90.f, 90.f);
+    float speed = 50.0 * delta;
+    switch (dir) {
+        case FORWARD:
+            position += speed * glm::vec4(front, 1.f);
+            break;
+        case BACKWARD:
+            position -= speed * glm::vec4(front, 1.f);
+            break;
+        case LEFT:
+            position -= glm::vec4(glm::normalize(glm::cross(front, up)) * speed, 1.f);
+            break;
+        case RIGHT:
+            position += glm::vec4(glm::normalize(glm::cross(front, up)) * speed, 1.f);
+            break;
+    }
 }
 
 glm::mat4
-Camera::projection ()
+Camera::fps_view ()
 {
-    return glm::perspective(glm::radians(fov), 
-            (float)screen_x / (float)screen_y, 0.1f, 1000.0f);
+    glm::vec3 pos(position);
+    return glm::lookAt(pos, pos + front, up);
 }
 
 /*
- * Current the arcball view of the world space.
+ * The arcball view of the world space.
  */
 glm::mat4
-Camera::view ()
+Camera::arc_view ()
 {
     glm::vec4 pos;
     /* the order of this matters and yes, `lefthand' is required */
     pos = glm::yawPitchRoll(
             -glm::radians(yaw - 90.f), glm::radians(pitch), 0.f) * lefthand;
-    pos *= zoom;
+    pos *= zoomf;
     pos += target;
     return glm::lookAt(glm::vec3(pos), glm::vec3(target), up);
+}
+
+glm::mat4
+Camera::projection ()
+{
+    return glm::perspective(glm::radians(fov),
+            (float)screen_x / (float)screen_y, 0.1f, 1000.0f);
+}
+
+void
+Camera::set_mode (CameraMode mode)
+{
+    this->mode = mode;
 }
 
 glm::vec3
 Camera::pos ()
 {
-    //return l_position;
     return position;
 }
 
@@ -311,9 +383,7 @@ void
 Camera::set_pos (glm::vec3 pos, float angle)
 {
     position = glm::vec4(pos.x, pos.y, pos.z, 1.0f);
-    l_position = position;
     yaw = angle;
-    //mouselook(0, 0);
 }
 
 Window::Window ()
@@ -344,7 +414,7 @@ Window::Window ()
 
     /* Get screen width and height since we're in fullscreen */
     SDL_GetCurrentDisplayMode(0, &display);
-    this->camera = Camera(display.w, display.h);
+    this->camera = Camera(display.w, display.h, FPS);
 
     this->glContext = SDL_GL_CreateContext(window);
     if (!this->glContext) {
@@ -449,9 +519,13 @@ Window::handle_input ()
             should_quit = true;
             break;
 
+        case SDL_MOUSEWHEEL:
+            camera.zoom(e.wheel.y);
+            break;
+
         case SDL_MOUSEMOTION:
             if (e.button.button == SDL_BUTTON(SDL_BUTTON_LEFT)) {
-                camera.arcball(e.motion.xrel, e.motion.yrel);
+                camera.look(e.motion.xrel, e.motion.yrel);
             }
             break;
         }
@@ -478,6 +552,12 @@ Window::handle_input ()
     }
     if (state[SDL_SCANCODE_D]) {
         camera.move(RIGHT, delta);
+    }
+    if (state[SDL_SCANCODE_I]) {
+        camera.set_mode(FPS);
+    }
+    if (state[SDL_SCANCODE_O]) {
+        camera.set_mode(ARCBALL);
     }
 }
 
