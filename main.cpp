@@ -102,7 +102,7 @@ main (int argc, char **argv)
     srand(time(NULL));
     init_board();
 
-    window.camera_pos(225, 25, 25, 0);
+    window.lookat(25, 25, 25);
 
     while (!window.should_close()) {
         window.handle_input();

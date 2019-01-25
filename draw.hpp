@@ -63,8 +63,11 @@ public:
     /* set the current mode of the camera */
     void set_mode (CameraMode mode);
 
+    /* set initial view of camera for FPS or orbiting position for ARCBALL */
+    void lookat (glm::vec3 pos);
+
+    /* get the current position of the camera */
     glm::vec3 pos ();
-    void set_pos (glm::vec3 pos, float angle);
 
 protected:
     void fps_look (int x, int y);
@@ -81,13 +84,17 @@ protected:
     int screen_x;
     int screen_y;
 
-    float yaw;
-    float pitch;
+    float fps_yaw;
+    float fps_pitch;
+    float arc_yaw;
+    float arc_pitch;
     float fov;
     float zoomf;
 
     glm::vec4 target;
-    glm::vec4 position; /* coordinates of the camera in the 3d plane */
+    /* position in 3d space for the camera for each mode */
+    glm::vec4 fps_position;
+    glm::vec4 arc_position;
     glm::vec3 front; /* where the camera is looking in 3d space */
     glm::vec3 up; /* a normal pointing up to normalize movement on 2d plane */
     glm::vec4 lefthand; /* vector for left-handed coordinate system */
@@ -104,7 +111,7 @@ public:
 
     void handle_input ();
 
-    void camera_pos (float x, float y, float z, float angle);
+    void lookat (float x, float y, float z);
 
     /* Give info about what to draw and where */
     void draw_cube (float x, float y, float z);

@@ -193,11 +193,15 @@ Camera::Camera ()
     : mode(FPS)
     , screen_x(0)
     , screen_y(0)
-    , yaw(0)
-    , pitch(0)
+    , fps_yaw(0)
+    , fps_pitch(0)
+    , arc_yaw(0)
+    , arc_pitch(0)
     , fov(0)
     , zoomf(0)
-    , position(glm::vec4(0.0f, 0.0f, 3.0f, 1.0f))
+    , target(glm::vec4(0.0f, 0.0f, 0.0f, 1.0f))
+    , fps_position(glm::vec4(0.0f, 0.0f, 3.0f, 1.0f))
+    , arc_position(glm::vec4(0.0f, 0.0f, 3.0f, 1.0f))
     , front(glm::vec3(0.0f, 0.0f, -1.0f))
     , up(glm::vec3(0.0f, 1.0f, 0.0f))
     , lefthand(glm::vec4(0.f, 0.f, -1.f, 1.f))
@@ -207,16 +211,19 @@ Camera::Camera (int screen_x, int screen_y)
     : mode(FPS)
     , screen_x(screen_x)
     , screen_y(screen_y)
-    , yaw(-90.0f) /* rotate to point left instead of right, initially */
-    , pitch(0.0f)
+    , fps_yaw(180.f)
+    , fps_pitch(0)
+    , arc_yaw(0)
+    , arc_pitch(0)
     , fov(45.0f)
     , zoomf(0)
-    , position(glm::vec4(0.0f, 0.0f, 3.0f, 1.0f))
+    , target(glm::vec4(0.0f, 0.0f, 0.0f, 1.0f))
+    , fps_position(glm::vec4(0.0f, 0.0f, 3.0f, 1.0f))
+    , arc_position(glm::vec4(0.0f, 0.0f, 3.0f, 1.0f))
     , front(glm::vec3(0.0f, 0.0f, -1.0f))
     , up(glm::vec3(0.0f, 1.0f, 0.0f))
     , lefthand(glm::vec4(0.f, 0.f, -1.f, 1.f))
 {
-    target = glm::vec4(25, 25, 25, 1.0f);
     zoomf = -250.f;
 }
 
@@ -224,16 +231,19 @@ Camera::Camera (int screen_x, int screen_y, CameraMode mode)
     : mode(mode)
     , screen_x(screen_x)
     , screen_y(screen_y)
-    , yaw(-90.0f) /* rotate to point left instead of right, initially */
-    , pitch(0.0f)
+    , fps_yaw(180.f)
+    , fps_pitch(0)
+    , arc_yaw(0)
+    , arc_pitch(0)
     , fov(45.0f)
     , zoomf(0)
-    , position(glm::vec4(0.0f, 0.0f, 3.0f, 1.0f))
+    , target(glm::vec4(0.0f, 0.0f, 0.0f, 1.0f))
+    , fps_position(glm::vec4(0.0f, 0.0f, 3.0f, 1.0f))
+    , arc_position(glm::vec4(0.0f, 0.0f, 3.0f, 1.0f))
     , front(glm::vec3(0.0f, 0.0f, -1.0f))
     , up(glm::vec3(0.0f, 1.0f, 0.0f))
     , lefthand(glm::vec4(0.f, 0.f, -1.f, 1.f))
 {
-    target = glm::vec4(25, 25, 25, 1.0f);
     zoomf = -250.f;
 }
 
@@ -281,12 +291,12 @@ Camera::fps_look (int x, int y)
     static const float sensitivity = 0.1f;
     glm::vec3 f;
 
-    this->yaw = fmodf(this->yaw + (x * sensitivity), 360.f);
-    this->pitch = glm::clamp(this->pitch + -(y * sensitivity), -90.f, 90.f);
+    fps_yaw = fmodf(fps_yaw + (x * sensitivity), 360.f);
+    fps_pitch = glm::clamp(fps_pitch + -(y * sensitivity), -90.f, 90.f);
 
-    f.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    f.y = sin(glm::radians(pitch));
-    f.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    f.x = cos(glm::radians(fps_yaw)) * cos(glm::radians(fps_pitch));
+    f.y = sin(glm::radians(fps_pitch));
+    f.z = sin(glm::radians(fps_yaw)) * cos(glm::radians(fps_pitch));
     this->front = glm::normalize(f);
 }
 
@@ -294,8 +304,8 @@ void
 Camera::arc_look (int x, int y)
 {
     static const float sensitivity = 0.1f;
-    this->yaw = fmodf(this->yaw + (x * sensitivity), 360.f);
-    this->pitch = glm::clamp(this->pitch + -(y * sensitivity), -90.f, 90.f);
+    arc_yaw = fmodf(arc_yaw + (x * sensitivity), 360.f);
+    arc_pitch = glm::clamp(arc_pitch + -(y * sensitivity), -90.f, 90.f);
 }
 
 void
@@ -304,16 +314,16 @@ Camera::arc_move (CameraDir dir, float delta)
     float speed = 50.0 * delta;
     switch (dir) {
         case FORWARD:
-            position.x -= speed;
+            arc_position.x -= speed;
             break;
         case BACKWARD:
-            position.x += speed;
+            arc_position.x += speed;
             break;
         case LEFT:
-            position.z += speed;
+            arc_position.z += speed;
             break;
         case RIGHT:
-            position.z -= speed;
+            arc_position.z -= speed;
             break;
     }
 }
@@ -324,16 +334,16 @@ Camera::fps_move (CameraDir dir, float delta)
     float speed = 50.0 * delta;
     switch (dir) {
         case FORWARD:
-            position += speed * glm::vec4(front, 1.f);
+            fps_position += speed * glm::vec4(front, 1.f);
             break;
         case BACKWARD:
-            position -= speed * glm::vec4(front, 1.f);
+            fps_position -= speed * glm::vec4(front, 1.f);
             break;
         case LEFT:
-            position -= glm::vec4(glm::normalize(glm::cross(front, up)) * speed, 1.f);
+            fps_position -= glm::vec4(glm::normalize(glm::cross(front, up)) * speed, 1.f);
             break;
         case RIGHT:
-            position += glm::vec4(glm::normalize(glm::cross(front, up)) * speed, 1.f);
+            fps_position += glm::vec4(glm::normalize(glm::cross(front, up)) * speed, 1.f);
             break;
     }
 }
@@ -341,7 +351,7 @@ Camera::fps_move (CameraDir dir, float delta)
 glm::mat4
 Camera::fps_view ()
 {
-    glm::vec3 pos(position);
+    glm::vec3 pos(fps_position);
     return glm::lookAt(pos, pos + front, up);
 }
 
@@ -354,10 +364,12 @@ Camera::arc_view ()
     glm::vec4 pos;
     /* the order of this matters and yes, `lefthand' is required */
     pos = glm::yawPitchRoll(
-            -glm::radians(yaw - 90.f), glm::radians(pitch), 0.f) * lefthand;
+            -glm::radians(arc_yaw - 90.f),
+             glm::radians(arc_pitch), 0.f) * lefthand;
     pos *= zoomf;
     pos += target;
-    return glm::lookAt(glm::vec3(pos), glm::vec3(target), up);
+    arc_position = pos;
+    return glm::lookAt(glm::vec3(arc_position), glm::vec3(target), up);
 }
 
 glm::mat4
@@ -376,14 +388,19 @@ Camera::set_mode (CameraMode mode)
 glm::vec3
 Camera::pos ()
 {
-    return position;
+    switch (mode) {
+        case FPS: return fps_position;
+        default:
+        case ARCBALL: return arc_position;
+    }
 }
 
 void
-Camera::set_pos (glm::vec3 pos, float angle)
+Camera::lookat (glm::vec3 pos)
 {
-    position = glm::vec4(pos.x, pos.y, pos.z, 1.0f);
-    yaw = angle;
+    this->fps_position = glm::vec4(pos.x - zoomf, pos.y, pos.z, 1.0f);
+    this->target = glm::vec4(pos.x, pos.y, pos.z, 1.0f);
+    fps_look(0,0);
 }
 
 Window::Window ()
@@ -483,9 +500,9 @@ Window::should_close ()
 }
 
 void
-Window::camera_pos (float x, float y, float z, float angle)
+Window::lookat (float x, float y, float z)
 {
-    camera.set_pos(glm::vec3(x, y, z), angle);
+    camera.lookat(glm::vec3(x, y, z));
 }
 
 void
