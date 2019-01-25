@@ -40,13 +40,10 @@ public:
     Camera ();
     Camera (int screen_x, int screen_y);
 
-    glm::vec3
-    screen_cord (int x, int y);
-
     /* using mouse's relative position to look in 3D-space */
     void mouselook (float xrel, float yrel);
 
-    void arcball (int xinit, int yinit, int x, int y);
+    void arcball (int x, int y);
 
     /* move camera across the 3D space along a 2D plane */
     void move (CameraDir dir, float delta);
@@ -66,16 +63,14 @@ protected:
     float yaw;
     float pitch;
     float fov;
-
-    glm::vec3 axis;
-    float angle;
+    float zoom;
 
     glm::vec4 target;
-    glm::vec3 l_position; /* coordinates of the camera in the 3d plane */
+    glm::vec3 l_position; /* coordinates of the light in the 3d plane */
     glm::vec4 position; /* coordinates of the camera in the 3d plane */
     glm::vec3 front; /* where the camera is looking in 3d space */
     glm::vec3 up; /* a normal pointing up to normalize movement on 2d plane */
-    glm::vec3 right; /* a normal pointing up to normalize movement on 2d plane */
+    glm::vec4 lefthand; /* vector for left-handed coordinate system */
 };
 
 class Window {
@@ -102,10 +97,6 @@ protected:
 
     unsigned long delta_time;
     unsigned long last_frame;
-
-    bool mouse_drag;
-    int mouse_x;
-    int mouse_y;
 
     std::vector<glm::vec3> object_positions;
 
