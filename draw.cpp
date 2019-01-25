@@ -209,6 +209,8 @@ Camera::Camera (int screen_x, int screen_y)
     , right(glm::vec3(1.0f, 0.0f, 0.0f))
 {
     target = glm::vec4(25, 25, 25, 1.0f);
+    angle = 0.f;
+    axis = glm::vec3(1.f);
 }
 
 void
@@ -233,18 +235,38 @@ Camera::mouselook (float xrel, float yrel)
     this->front = glm::normalize(f);
 }
 
-void
-Camera::arcball (float xrel, float yrel)
+glm::vec3
+Camera::screen_cord (float x, float y)
 {
-    static const float sensitivity = 0.1f;
+    glm::vec3 coord(0.0f);
+    
+    //coord.x = (2 * x - screen_x) / screen_x;
+    //coord.y = -(2 * y - screen_y) / screen_y;
+    
+    //coord.x = glm::clamp(coord.x, -1.0f, 1.0f);
+    //coord.y = glm::clamp(coord.y, -1.0f, 1.0f);
 
-    this->yaw += -xrel * sensitivity;
-    this->pitch += -yrel * sensitivity;
+    coord.x = (x / ((float)screen_x * 2)) - 1.0;
+    coord.y = -(y / ((float)screen_y * 2)) - 1.0;
+    
+    float length_squared = coord.x * coord.x + coord.y * coord.y;
 
-    if (this->pitch > 89.0f)
-        this->pitch = 89.0f;
-    if (this->pitch < -89.0f)
-        this->pitch = -89.0f;
+    if (length_squared <= 1.0)
+        coord.z = sqrt(1.0 - length_squared);
+    else
+        coord = glm::normalize(coord);
+    
+    return coord;
+}
+
+void
+Camera::arcball (float xinit, float yinit, float x, float y)
+{
+    glm::vec3 last_pos = screen_cord(xinit, yinit);
+    glm::vec3 curr_pos = screen_cord(x, y);
+
+    this->angle = acos(std::min(1.0f, glm::dot(last_pos, curr_pos)));
+    this->axis = glm::cross(last_pos, curr_pos);
 }
 
 void
@@ -265,20 +287,6 @@ Camera::move (CameraDir dir, float delta)
             position.z -= speed;
             break;
     }
-    //switch (dir) {
-    //    case FORWARD:
-    //        position += speed * front;
-    //        break;
-    //    case BACKWARD:
-    //        position -= speed * front;
-    //        break;
-    //    case LEFT:
-    //        position -= glm::normalize(glm::cross(front, up)) * speed;
-    //        break;
-    //    case RIGHT:
-    //        position += glm::normalize(glm::cross(front, up)) * speed;
-    //        break;
-    //}
 }
 
 glm::mat4
@@ -291,19 +299,9 @@ Camera::projection ()
 glm::mat4
 Camera::view ()
 {
-    //return glm::lookAt(position, position + front, up);
-    
-    static const glm::mat4 m(1.0f);
-    glm::vec4 pos = position;
-    glm::mat4 rot(1.0f);
-
-    rot = glm::rotate(rot, glm::radians(pitch), right);
-    rot = glm::rotate(rot, glm::radians(yaw), up);
-    pos = rot * (pos - target) + target;
-
-    l_position = glm::vec3(pos);
-
-    return glm::lookAt(l_position, glm::vec3(target), up);
+    static const float speed = 1.5f;
+    static const glm::mat4 view = glm::lookAt(glm::vec3(position), glm::vec3(target), up);
+    return view * glm::rotate(glm::mat4(1.0f), glm::degrees(angle) * speed, axis);
 }
 
 glm::vec3
@@ -327,6 +325,10 @@ Window::Window ()
     , delta_time(0.0f)
     , last_frame(0.0f)
 {
+    mouse_drag = false;
+    mouse_x = 0;
+    mouse_y = 0;
+
     SDL_DisplayMode display;
     GLuint vertex_id, norm_id;
 
@@ -455,10 +457,21 @@ Window::handle_input ()
             should_quit = true;
             break;
 
+        case SDL_MOUSEBUTTONDOWN:
+            mouse_drag = true;
+            mouse_x = e.button.x;
+            mouse_y = e.button.y;
+            break;
+
+        case SDL_MOUSEBUTTONUP:
+            mouse_drag = false;
+            break;
+
         case SDL_MOUSEMOTION:
-            if (e.button.button == SDL_BUTTON(SDL_BUTTON_LEFT)) {
+            //if (e.button.button == SDL_BUTTON(SDL_BUTTON_LEFT)) {
+            if (mouse_drag) {
                 //camera.mouselook(e.motion.xrel, e.motion.yrel);
-                camera.arcball(e.motion.xrel, e.motion.yrel);
+                camera.arcball(mouse_x, mouse_y, e.motion.x, e.motion.y);
             }
             break;
         }

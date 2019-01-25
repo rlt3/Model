@@ -1,5 +1,6 @@
 #pragma once
 #define GLM_SWIZZLE
+#define GLM_ENABLE_EXPERIMENTAL
 #include <vector>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
@@ -8,6 +9,7 @@
 #include <GL/glu.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/euler_angles.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 class Shader {
@@ -38,10 +40,13 @@ public:
     Camera ();
     Camera (int screen_x, int screen_y);
 
+    glm::vec3
+    screen_cord (float x, float y);
+
     /* using mouse's relative position to look in 3D-space */
     void mouselook (float xrel, float yrel);
 
-    void arcball (float xrel, float yrel);
+    void arcball (float xinit, float yinit, float x, float y);
 
     /* move camera across the 3D space along a 2D plane */
     void move (CameraDir dir, float delta);
@@ -61,6 +66,9 @@ protected:
     float yaw;
     float pitch;
     float fov;
+
+    glm::vec3 axis;
+    float angle;
 
     glm::vec4 target;
     glm::vec3 l_position; /* coordinates of the camera in the 3d plane */
@@ -94,6 +102,10 @@ protected:
 
     unsigned long delta_time;
     unsigned long last_frame;
+
+    bool mouse_drag;
+    float mouse_x;
+    float mouse_y;
 
     std::vector<glm::vec3> object_positions;
 
