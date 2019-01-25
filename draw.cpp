@@ -308,26 +308,46 @@ Camera::arc_look (int x, int y)
     arc_pitch = glm::clamp(arc_pitch + -(y * sensitivity), -90.f, 90.f);
 }
 
+/*
+ * Pans camera left and right, keeping height, by moving the target around
+ * the camera arcs.
+ */
 void
 Camera::arc_move (CameraDir dir, float delta)
 {
     float speed = 50.0 * delta;
+
+    glm::vec4 right, forward;
+
+    right = glm::normalize(target - arc_position);
+    right = glm::vec4(glm::cross(glm::vec3(right), up), 1.f);
+    right.y = 0;
+    right = glm::normalize(right);
+
+    forward = glm::normalize(target - arc_position);
+    forward.y = 0;
+    forward = glm::normalize(forward);
+
     switch (dir) {
         case FORWARD:
-            arc_position.x -= speed;
+            target += forward * speed;
             break;
         case BACKWARD:
-            arc_position.x += speed;
-            break;
-        case LEFT:
-            arc_position.z += speed;
+            target -= forward * speed;
             break;
         case RIGHT:
-            arc_position.z -= speed;
+            target -= right * speed;
+            break;
+        case LEFT:
+            target += right * speed;
             break;
     }
 }
 
+/*
+ * Moves the cameara itself and uses the front to translate its motion into
+ * 3D spaces. It's not restricted to a plane like the above.
+ */
 void
 Camera::fps_move (CameraDir dir, float delta)
 {
