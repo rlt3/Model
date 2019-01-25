@@ -190,9 +190,9 @@ Shader::compile_shader (const char *src, int type)
 }
 
 Camera::Camera ()
-    : mode(FPS)
-    , screen_x(0)
+    : screen_x(0)
     , screen_y(0)
+    , mode(FPS)
     , fps_yaw(0)
     , fps_pitch(0)
     , arc_yaw(0)
@@ -208,9 +208,9 @@ Camera::Camera ()
 { }
 
 Camera::Camera (int screen_x, int screen_y)
-    : mode(FPS)
-    , screen_x(screen_x)
+    : screen_x(screen_x)
     , screen_y(screen_y)
+    , mode(FPS)
     , fps_yaw(180.f)
     , fps_pitch(0)
     , arc_yaw(0)
@@ -228,9 +228,9 @@ Camera::Camera (int screen_x, int screen_y)
 }
 
 Camera::Camera (int screen_x, int screen_y, CameraMode mode)
-    : mode(mode)
-    , screen_x(screen_x)
+    : screen_x(screen_x)
     , screen_y(screen_y)
+    , mode(mode)
     , fps_yaw(180.f)
     , fps_pitch(0)
     , arc_yaw(0)
@@ -537,6 +537,81 @@ Window::get_ticks ()
     return SDL_GetTicks();
 }
 
+//gluUnProject(GLdouble winx, GLdouble winy, GLdouble winz,
+//  const GLdouble modelMatrix[16],
+//  const GLdouble projMatrix[16],
+//const GLint viewport[4],
+// GLdouble *objx, GLdouble *objy, GLdouble *objz)
+//{
+//	double finalMatrix[16];
+//	double in[4];
+//	double out[4];
+//	
+//	__gluMultMatricesd(modelMatrix, projMatrix, finalMatrix);
+//	if (!__gluInvertMatrixd(finalMatrix, finalMatrix)) return(GL_FALSE);
+//	
+//	in[0]=winx;
+//	in[1]=winy;
+//	in[2]=winz;
+//	in[3]=1.0;
+//	
+//	/* Map x and y from window coordinates */
+//	in[0] = (in[0] - viewport[0]) / viewport[2];
+//	in[1] = (in[1] - viewport[1]) / viewport[3];
+//	
+//	/* Map to range -1 to 1 */
+//	in[0] = in[0] * 2 - 1;
+//	in[1] = in[1] * 2 - 1;
+//	in[2] = in[2] * 2 - 1;
+//	
+//	__gluMultMatrixVecd(finalMatrix, in, out);
+//	if (out[3] == 0.0) return(GL_FALSE);
+//	out[0] /= out[3];
+//	out[1] /= out[3];
+//	out[2] /= out[3];
+//	*objx = out[0];
+//	*objy = out[1];
+//	*objz = out[2];
+//	return(GL_TRUE);
+//}
+
+glm::vec3
+get_coords_from_click (int x, int y,
+                      int width, int height,
+                      glm::mat4 view,
+                      glm::mat4 proj)
+{
+    float depth;
+    glm::mat4 mat;
+    glm::vec4 in;
+    glm::vec4 out;
+
+    glReadPixels(x, y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
+
+    mat = view * proj;
+    mat = glm::inverse(mat);
+
+    in.x = x;
+    in.y = y;
+    in.z = depth;
+    in.w = 1.f;
+
+    in.x = in.x / width;
+    in.y = in.y / height;
+
+    in.x = in.x * 2 - 1;
+    in.y = in.y * 2 - 1;
+    in.z = in.z * 2 - 1;
+
+    out = mat * in;
+
+    out.x /= out.w;
+    out.y /= out.w;
+    out.z /= out.w;
+
+    return glm::vec3(out);
+}
+
 void
 Window::handle_input ()
 {
@@ -550,10 +625,22 @@ Window::handle_input ()
     /* time is in miliseconds, dividing by one-thousandth gets delta as float */
     delta = ((float)this->delta_time * 0.001);
 
+    glm::vec3 coords;
+
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
         case SDL_QUIT:
             should_quit = true;
+            break;
+
+        case SDL_MOUSEBUTTONDOWN:
+            coords = get_coords_from_click (e.button.x, e.button.y,
+                                            camera.screen_x, camera.screen_y,
+                                            camera.view(),
+                                            camera.projection());
+            printf("(%d, %d) -> (%f, %f, %f)\n",
+                    e.button.x, e.button.x,
+                    coords.x, coords.y, coords.z);
             break;
 
         case SDL_MOUSEWHEEL:

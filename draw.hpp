@@ -69,6 +69,9 @@ public:
     /* get the current position of the camera */
     glm::vec3 pos ();
 
+    int screen_x;
+    int screen_y;
+
 protected:
     void fps_look (int x, int y);
     void arc_look (int x, int y);
@@ -80,9 +83,6 @@ protected:
     glm::mat4 arc_view ();
 
     CameraMode mode;
-
-    int screen_x;
-    int screen_y;
 
     float fps_yaw;
     float fps_pitch;
