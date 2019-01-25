@@ -336,10 +336,10 @@ Camera::arc_move (CameraDir dir, float delta)
             target -= forward * speed;
             break;
         case RIGHT:
-            target -= right * speed;
+            target += right * speed;
             break;
         case LEFT:
-            target += right * speed;
+            target -= right * speed;
             break;
     }
 }
