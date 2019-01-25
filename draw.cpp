@@ -235,40 +235,6 @@ Camera::mouselook (float xrel, float yrel)
     this->front = glm::normalize(f);
 }
 
-glm::vec3
-Camera::screen_cord (float x, float y)
-{
-    glm::vec3 coord(0.0f);
-    
-    //coord.x = (2 * x - screen_x) / screen_x;
-    //coord.y = -(2 * y - screen_y) / screen_y;
-    
-    //coord.x = glm::clamp(coord.x, -1.0f, 1.0f);
-    //coord.y = glm::clamp(coord.y, -1.0f, 1.0f);
-
-    coord.x = (x / ((float)screen_x * 2)) - 1.0;
-    coord.y = -(y / ((float)screen_y * 2)) - 1.0;
-    
-    float length_squared = coord.x * coord.x + coord.y * coord.y;
-
-    if (length_squared <= 1.0)
-        coord.z = sqrt(1.0 - length_squared);
-    else
-        coord = glm::normalize(coord);
-    
-    return coord;
-}
-
-void
-Camera::arcball (float xinit, float yinit, float x, float y)
-{
-    glm::vec3 last_pos = screen_cord(xinit, yinit);
-    glm::vec3 curr_pos = screen_cord(x, y);
-
-    this->angle = acos(std::min(1.0f, glm::dot(last_pos, curr_pos)));
-    this->axis = glm::cross(last_pos, curr_pos);
-}
-
 void
 Camera::move (CameraDir dir, float delta)
 {
@@ -289,6 +255,39 @@ Camera::move (CameraDir dir, float delta)
     }
 }
 
+glm::vec3
+Camera::screen_cord (int x, int y)
+{
+	glm::vec3 coord(0.0f);
+    coord.x = ((float)x / (screen_x * 2)) - 1.0;
+    coord.y = ((float)y / (screen_y * 2)) - 1.0;
+    coord.y = -coord.y;
+
+    float length_squared = coord.x * coord.x + coord.y * coord.y;
+
+    if (length_squared <= 1.0) {
+        coord.z = sqrt(1.0 - length_squared);
+    }
+    else {
+        coord = glm::normalize(coord);
+    }
+
+    return coord;
+}
+
+void
+Camera::arcball (int xinit, int yinit, int x, int y)
+{
+    static const float sensitivity = 0.1f;
+    //this->yaw += x * sensitivity;
+    //this->pitch += -(y * sensitivity);
+
+    this->yaw = (x - xinit) * sensitivity;
+    this->pitch = -((y - yinit) * sensitivity);
+
+    printf("%f, %f\n", yaw, pitch);
+}
+
 glm::mat4
 Camera::projection ()
 {
@@ -299,9 +298,14 @@ Camera::projection ()
 glm::mat4
 Camera::view ()
 {
-    static const float speed = 1.5f;
-    static const glm::mat4 view = glm::lookAt(glm::vec3(position), glm::vec3(target), up);
-    return view * glm::rotate(glm::mat4(1.0f), glm::degrees(angle) * speed, axis);
+    glm::vec4 pos = glm::vec4(position.x, position.y, position.z, 1.0f);
+    glm::mat4 rot(1.0f);
+
+    rot = glm::rotate(rot, glm::radians(pitch), right);
+    rot = glm::rotate(rot, glm::radians(yaw), up);
+    pos = rot * (pos - target) + target;
+
+    return glm::lookAt(glm::vec3(pos), glm::vec3(target), up);
 }
 
 glm::vec3

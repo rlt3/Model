@@ -41,12 +41,12 @@ public:
     Camera (int screen_x, int screen_y);
 
     glm::vec3
-    screen_cord (float x, float y);
+    screen_cord (int x, int y);
 
     /* using mouse's relative position to look in 3D-space */
     void mouselook (float xrel, float yrel);
 
-    void arcball (float xinit, float yinit, float x, float y);
+    void arcball (int xinit, int yinit, int x, int y);
 
     /* move camera across the 3D space along a 2D plane */
     void move (CameraDir dir, float delta);
@@ -104,8 +104,8 @@ protected:
     unsigned long last_frame;
 
     bool mouse_drag;
-    float mouse_x;
-    float mouse_y;
+    int mouse_x;
+    int mouse_y;
 
     std::vector<glm::vec3> object_positions;
 
