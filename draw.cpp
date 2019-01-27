@@ -234,9 +234,8 @@ Camera::Camera (int screen_x, int screen_y)
     , arc_position(glm::vec4(0.0f, 0.0f, 3.0f, 1.0f))
     , front(glm::vec3(0.0f, 0.0f, -1.0f))
     , up(glm::vec3(0.0f, 1.0f, 0.0f))
-    , lefthand(glm::vec4(0.f, 0.f, -1.f, 1.f))
-{
-}
+    , lefthand(glm::vec4(0.f, 0.f, 1.f, 1.f))
+{ }
 
 Camera::Camera (int screen_x, int screen_y, CameraMode mode)
     : screen_x(screen_x)
@@ -253,9 +252,8 @@ Camera::Camera (int screen_x, int screen_y, CameraMode mode)
     , arc_position(glm::vec4(0.0f, 0.0f, 3.0f, 1.0f))
     , front(glm::vec3(0.0f, 0.0f, -1.0f))
     , up(glm::vec3(0.0f, 1.0f, 0.0f))
-    , lefthand(glm::vec4(0.f, 0.f, -1.f, 1.f))
+    , lefthand(glm::vec4(0.f, 0.f, 1.f, 1.f))
 { }
-
 
 /* zooming in and out of where one looks in 3D-space */
 void
