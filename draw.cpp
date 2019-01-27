@@ -14,7 +14,7 @@ checkGLError()
 }
 
 static const GLchar* vertex_source =
-    "#version 130\n"
+    "#version 140\n"
     "in vec3 vertex;\n"
     "in vec3 norm;\n"
 	"out vec3 FragPos;\n"
@@ -25,12 +25,12 @@ static const GLchar* vertex_source =
     "void main()\n"
     "{\n"
     "   FragPos = vec3(model * vec4(vertex, 1.0));\n"
-    "   Normal = norm;\n"
+    "   Normal = mat3(transpose(inverse(model))) * norm;\n"
     "   gl_Position = projection * view * model * vec4(vertex.xyz, 1.0);\n"
     "}";
 
 static const GLchar* fragment_source =
-    "#version 130\n"
+    "#version 140\n"
     "out vec4 FragColor;\n"
     "in vec3 Normal;\n"
     "in vec3 FragPos;\n"
@@ -39,60 +39,72 @@ static const GLchar* fragment_source =
     "uniform vec3 objectColor;\n"
     "void main()\n"
     "{\n"
+    "   /* ambient */\n"
     "   float ambientStrength = 0.1;\n"
     "   vec3 ambient = ambientStrength * lightColor;\n"
     "\n"
+    "   /* diffuse */\n"
     "   vec3 norm = normalize(Normal);\n"
     "   vec3 lightDir = normalize(lightPos - FragPos);\n"
     "   float diff = max(dot(norm, lightDir), 0.0);\n"
     "   vec3 diffuse = diff * lightColor;\n"
     "\n"
-    "   vec3 result = (ambient + diffuse) * objectColor;\n"
+    "   /* specular */\n"
+    "   float specularStrength = 0.25;\n"
+    "   vec3 viewDir = normalize(lightPos - FragPos);\n"
+    "   vec3 reflectDir = reflect(-lightDir, norm);  \n"
+    "   float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);\n"
+    "   vec3 specular = specularStrength * spec * lightColor;  \n"
+    "\n"
+    "   vec3 result = (ambient + diffuse + specular) * objectColor;\n"
     "   FragColor = vec4(result, 1.0);\n"
     "}";
 
 static const float vertices[] = {
-	-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-	 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-	 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-	 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-	-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+    /* (x,y,z) and fragment shader (x,y,z) */
 
-	-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-	 0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-	 0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-	 0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-	-0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-	-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-
-	-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-	-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-	-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-	-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-	-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-	-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-
-	 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-	 0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-	 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-	 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-	 0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-	 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-
-	-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-	 0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-	 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-	 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-	-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-
-	-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-	 0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-	 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-	 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-	-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-	-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
+    /* back */
+    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+     0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+    /* front */
+    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+     0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+    /* left */
+    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+    -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+    -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+    -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+    -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+    /* right */
+     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+     0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+    /* bottom */
+    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+     0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+    /* top */
+    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+     0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
 };
 
 Shader::Shader ()
@@ -292,7 +304,7 @@ Camera::fps_look (int x, int y)
     glm::vec3 f;
 
     fps_yaw = fmodf(fps_yaw + (x * sensitivity), 360.f);
-    fps_pitch = glm::clamp(fps_pitch + -(y * sensitivity), -90.f, 90.f);
+    fps_pitch = glm::clamp(fps_pitch + -(y * sensitivity), -89.f, 89.f);
 
     f.x = cos(glm::radians(fps_yaw)) * cos(glm::radians(fps_pitch));
     f.y = sin(glm::radians(fps_pitch));
@@ -305,7 +317,7 @@ Camera::arc_look (int x, int y)
 {
     static const float sensitivity = 0.1f;
     arc_yaw = fmodf(arc_yaw + (x * sensitivity), 360.f);
-    arc_pitch = glm::clamp(arc_pitch + -(y * sensitivity), -90.f, 90.f);
+    arc_pitch = glm::clamp(arc_pitch + -(y * sensitivity), -89.f, 89.f);
 }
 
 /*
@@ -451,7 +463,7 @@ Window::Window ()
 
     /* Get screen width and height since we're in fullscreen */
     SDL_GetCurrentDisplayMode(0, &display);
-    this->camera = Camera(display.w, display.h, FPS);
+    this->camera = Camera(display.w, display.h, ARCBALL);
 
     this->glContext = SDL_GL_CreateContext(window);
     if (!this->glContext) {
@@ -497,10 +509,9 @@ Window::Window ()
         fprintf(stderr, "Warning: SwapInterval could not be set: %s\n", 
                 SDL_GetError());
 
-    /*
-     * TODO: rewrite vertices in winding to use this for performance
-     * glEnable(GL_CULL_FACE);
-     */
+    glEnable(GL_CULL_FACE);
+    /* Clockwise winding order are 'face' vertices */
+    glFrontFace(GL_CW);
 }
 
 Window::~Window()
