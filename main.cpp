@@ -1,10 +1,11 @@
 #include <cstdlib>
 #include <time.h>
 #include "draw.hpp"
+#include "octree.hpp"
 
-#define BOARD_X   50
-#define BOARD_Y   50
-#define BOARD_Z   50
+#define BOARD_X   12
+#define BOARD_Y   12
+#define BOARD_Z   12
 #define LIVE      1
 #define DEAD      0
 #define PERIOD 	  250
@@ -96,28 +97,48 @@ step_board ()
 int
 main (int argc, char **argv)
 {
-    unsigned long last_time = 0;
+    std::vector<glm::vec3> objects;
+
+    for (int x = 0; x < BOARD_X; x++)
+        for (int y = 0; y < BOARD_Y; y++)
+            for (int z = 0; z < BOARD_Z; z++)
+                objects.push_back(glm::vec3(x, y, z));
+
+    Octree O(BoundingBox(glm::vec3(0), glm::vec3(BOARD_X, BOARD_Y, BOARD_Z)), objects);
+    //O.print();
+
     Window window;
-
-    srand(time(NULL));
-    init_board();
-
-    window.lookat(25, 25, 25);
+    window.lookat(BOARD_X / 2, BOARD_Y / 2, BOARD_Z / 2, BOARD_X * 5);
 
     while (!window.should_close()) {
         window.handle_input();
-        for (int y = 0; y < BOARD_Y; y++)
-            for (int x = 0; x < BOARD_X; x++)
-                for (int z = 0; z < BOARD_Z; z++)
-                    if (curr_board[y][x][z])
-                        window.draw_cube(x, y, z);
-
-        if (window.get_ticks() - last_time > PERIOD) {
-            step_board();
-            last_time = window.get_ticks();
-        }
+        for (auto &vec : objects)
+            window.draw_cube(vec.x, vec.y, vec.z);
         window.render();
     }
+
+    //unsigned long last_time = 0;
+    //Window window;
+
+    //srand(time(NULL));
+    //init_board();
+
+    //window.lookat(25, 25, 25);
+
+    //while (!window.should_close()) {
+    //    window.handle_input();
+    //    for (int y = 0; y < BOARD_Y; y++)
+    //        for (int x = 0; x < BOARD_X; x++)
+    //            for (int z = 0; z < BOARD_Z; z++)
+    //                if (curr_board[y][x][z])
+    //                    window.draw_cube(x, y, z);
+
+    //    if (window.get_ticks() - last_time > PERIOD) {
+    //        step_board();
+    //        last_time = window.get_ticks();
+    //    }
+    //    window.render();
+    //}
 
     return 0;
 }

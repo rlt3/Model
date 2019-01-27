@@ -216,7 +216,7 @@ Camera::Camera ()
     , arc_position(glm::vec4(0.0f, 0.0f, 3.0f, 1.0f))
     , front(glm::vec3(0.0f, 0.0f, -1.0f))
     , up(glm::vec3(0.0f, 1.0f, 0.0f))
-    , lefthand(glm::vec4(0.f, 0.f, -1.f, 1.f))
+    , lefthand(glm::vec4(0.f, 0.f, 1.f, 1.f))
 { }
 
 Camera::Camera (int screen_x, int screen_y)
@@ -236,7 +236,6 @@ Camera::Camera (int screen_x, int screen_y)
     , up(glm::vec3(0.0f, 1.0f, 0.0f))
     , lefthand(glm::vec4(0.f, 0.f, -1.f, 1.f))
 {
-    zoomf = -250.f;
 }
 
 Camera::Camera (int screen_x, int screen_y, CameraMode mode)
@@ -255,16 +254,15 @@ Camera::Camera (int screen_x, int screen_y, CameraMode mode)
     , front(glm::vec3(0.0f, 0.0f, -1.0f))
     , up(glm::vec3(0.0f, 1.0f, 0.0f))
     , lefthand(glm::vec4(0.f, 0.f, -1.f, 1.f))
-{
-    zoomf = -250.f;
-}
+{ }
+
 
 /* zooming in and out of where one looks in 3D-space */
 void
 Camera::zoom (int increment)
 {
     static const float speed = 5.f;
-    this->zoomf = glm::clamp(this->zoomf + speed * increment, -1000.f, 1000.f);
+    this->zoomf = glm::clamp(this->zoomf - speed * increment, -1000.f, 1000.f);
 }
 
 /* using x, y position to orient where one looks in 3D-space */
@@ -327,7 +325,7 @@ Camera::arc_look (int x, int y)
 void
 Camera::arc_move (CameraDir dir, float delta)
 {
-    float speed = 50.0 * delta;
+    float speed = 25.0 * delta;
 
     glm::vec4 right, forward;
 
@@ -363,7 +361,7 @@ Camera::arc_move (CameraDir dir, float delta)
 void
 Camera::fps_move (CameraDir dir, float delta)
 {
-    float speed = 50.0 * delta;
+    float speed = 25.0 * delta;
     switch (dir) {
         case FORWARD:
             fps_position += speed * glm::vec4(front, 1.f);
@@ -428,9 +426,10 @@ Camera::pos ()
 }
 
 void
-Camera::lookat (glm::vec3 pos)
+Camera::lookat (glm::vec3 pos, float zoom)
 {
-    this->fps_position = glm::vec4(pos.x - zoomf, pos.y, pos.z, 1.0f);
+    this->zoomf = zoom;
+    this->fps_position = glm::vec4(pos.x + zoomf, pos.y, pos.z, 1.0f);
     this->target = glm::vec4(pos.x, pos.y, pos.z, 1.0f);
     fps_look(0,0);
 }
@@ -531,9 +530,9 @@ Window::should_close ()
 }
 
 void
-Window::lookat (float x, float y, float z)
+Window::lookat (float x, float y, float z, float zoom)
 {
-    camera.lookat(glm::vec3(x, y, z));
+    camera.lookat(glm::vec3(x, y, z), zoom);
 }
 
 void

@@ -64,7 +64,7 @@ public:
     void set_mode (CameraMode mode);
 
     /* set initial view of camera for FPS or orbiting position for ARCBALL */
-    void lookat (glm::vec3 pos);
+    void lookat (glm::vec3 pos, float zoom);
 
     /* get the current position of the camera */
     glm::vec3 pos ();
@@ -111,7 +111,7 @@ public:
 
     void handle_input ();
 
-    void lookat (float x, float y, float z);
+    void lookat (float x, float y, float z, float zoom);
 
     /* Give info about what to draw and where */
     void draw_cube (float x, float y, float z);
