@@ -3,15 +3,15 @@
 #include "draw.hpp"
 #include "octree.hpp"
 
-#define BOARD_X   12
-#define BOARD_Y   12
-#define BOARD_Z   12
+#define BOARD_X   32
+#define BOARD_Y   32
+#define BOARD_Z   32
 #define LIVE      1
 #define DEAD      0
 #define PERIOD 	  250
 
-static int curr_board[BOARD_X][BOARD_Y][BOARD_Z];
-static int next_board[BOARD_X][BOARD_Y][BOARD_Z];
+static int curr_board[BOARD_X][BOARD_Y][BOARD_Z] = {};
+static int next_board[BOARD_X][BOARD_Y][BOARD_Z] = {};
 
 void
 init_board ()
@@ -19,7 +19,10 @@ init_board ()
     for (int x = 0; x < BOARD_X; x++)
         for (int y = 0; y < BOARD_Y; y++)
             for (int z = 0; z < BOARD_Z; z++)
-                curr_board[y][x][z] = rand() % 2;
+                if (rand() % 500 > 490)
+                    curr_board[x][y][z] = 1;
+                else
+                    curr_board[x][y][z] = 0;
 }
 
 /*
@@ -75,70 +78,98 @@ void
 step_board ()
 {
     int neighbors;
+    int axis;
+    int dir;
+    int ix, iy, iz;
 
     for (int x = 0; x < BOARD_X; x++) {
         for (int y = 0; y < BOARD_Y; y++) {
             for (int z = 0; z < BOARD_Z; z++) {
+                if (curr_board[x][y][z] == DEAD)
+                    continue;
+
                 neighbors = cell_neighbors(x, y, z, LIVE);
-                if (curr_board[y][x][z]) {
-                    if (neighbors > 18)
-                        next_board[y][x][z] = 0;
-                } 
-                else if (neighbors < 6) {
-                    next_board[y][x][z] = 1;
+                if (neighbors > 18) {
+                    next_board[x][y][z] = LIVE;
+                }
+                else {
+                    dir = (rand() % 2);
+                    axis = rand() % 100;
+
+                    if (dir)
+                        dir = -1;
+                    else
+                        dir = 1;
+
+                    ix = x;
+                    iy = y;
+                    iz = z;
+
+                    if (axis < 33 && x > 0 && x < BOARD_X - 1)
+                        ix += dir;
+                    else if (axis < 66 && y > 0 && y < BOARD_Y - 1)
+                        iy += dir;
+                    else if (z > 0 && z < BOARD_Z - 1)
+                        iz += dir;
+
+                    if (next_board[ix][iy][iz] == DEAD)
+                        next_board[ix][iy][iz] = LIVE;
+                    else
+                        next_board[x][y][z] = LIVE;
                 }
             }
         }
     }
 
     memcpy(curr_board, next_board, BOARD_X * BOARD_Y * BOARD_Z * sizeof(int));
+    memset(next_board, 0, BOARD_X * BOARD_Y * BOARD_Z * sizeof(int));
 }
 
 int
 main (int argc, char **argv)
 {
-    std::vector<glm::vec3> objects;
+    //std::vector<glm::vec3> objects;
 
-    for (int x = 0; x < BOARD_X; x++)
-        for (int y = 0; y < BOARD_Y; y++)
-            for (int z = 0; z < BOARD_Z; z++)
-                objects.push_back(glm::vec3(x, y, z));
+    //int y_max = 1;
 
-    Octree O(BoundingBox(glm::vec3(0), glm::vec3(BOARD_X, BOARD_Y, BOARD_Z)), objects);
+    //for (int x = 0; x < BOARD_X; x++) {
+    //    for (int y = 0; y < y_max; y++)
+    //        for (int z = 0; z < y_max; z++)
+    //            objects.push_back(glm::vec3(x, y, z));
+    //    y_max++;
+    //    if (y_max >= BOARD_Y)
+    //        y_max = BOARD_Y;
+    //}
+
+    //Octree O(BoundingBox(glm::vec3(0), glm::vec3(BOARD_X, BOARD_Y, BOARD_Z)), objects);
     //O.print();
 
+    unsigned long last_time = 0;
     Window window;
     window.lookat(BOARD_X / 2, BOARD_Y / 2, BOARD_Z / 2, BOARD_X * 5);
 
+    srand(time(NULL));
+    init_board();
+
     while (!window.should_close()) {
         window.handle_input();
-        for (auto &vec : objects)
-            window.draw_cube(vec.x, vec.y, vec.z);
+
+        for (int x = 0; x < BOARD_X; x++)
+            for (int y = 0; y < BOARD_Y; y++)
+                for (int z = 0; z < BOARD_Z; z++)
+                    if (curr_board[x][y][z])
+                        window.draw_cube(x, y, z);
+
+        if (window.get_ticks() - last_time > PERIOD) {
+            step_board();
+            last_time = window.get_ticks();
+        }
         window.render();
     }
 
-    //unsigned long last_time = 0;
-    //Window window;
-
-    //srand(time(NULL));
     //init_board();
-
-    //window.lookat(25, 25, 25);
-
-    //while (!window.should_close()) {
-    //    window.handle_input();
-    //    for (int y = 0; y < BOARD_Y; y++)
-    //        for (int x = 0; x < BOARD_X; x++)
-    //            for (int z = 0; z < BOARD_Z; z++)
-    //                if (curr_board[y][x][z])
-    //                    window.draw_cube(x, y, z);
-
-    //    if (window.get_ticks() - last_time > PERIOD) {
-    //        step_board();
-    //        last_time = window.get_ticks();
-    //    }
-    //    window.render();
-    //}
+    //for (int i = 0; i < 100; i++)
+    //    step_board();
 
     return 0;
 }
