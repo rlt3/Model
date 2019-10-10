@@ -85,6 +85,17 @@ step_board ()
     for (int x = 0; x < BOARD_X; x++) {
         for (int y = 0; y < BOARD_Y; y++) {
             for (int z = 0; z < BOARD_Z; z++) {
+                //if (curr_board[x][y][z] == LIVE) {
+                //    neighbors = cell_neighbors(x, y, z, LIVE);
+                //    if (neighbors < 6 || neighbors > 10)
+                //        next_board[x][y][z] = DEAD;
+                //    else
+                //        next_board[x][y][z] = LIVE;
+                //}
+                //else if (neighbors == 10) {
+                //    next_board[x][y][z] = LIVE;
+                //}
+
                 if (curr_board[x][y][z] == DEAD)
                     continue;
 
@@ -128,22 +139,6 @@ step_board ()
 int
 main (int argc, char **argv)
 {
-    //std::vector<glm::vec3> objects;
-
-    //int y_max = 1;
-
-    //for (int x = 0; x < BOARD_X; x++) {
-    //    for (int y = 0; y < y_max; y++)
-    //        for (int z = 0; z < y_max; z++)
-    //            objects.push_back(glm::vec3(x, y, z));
-    //    y_max++;
-    //    if (y_max >= BOARD_Y)
-    //        y_max = BOARD_Y;
-    //}
-
-    //Octree O(BoundingBox(glm::vec3(0), glm::vec3(BOARD_X, BOARD_Y, BOARD_Z)), objects);
-    //O.print();
-
     unsigned long last_time = 0;
     Window window;
     window.lookat(BOARD_X / 2, BOARD_Y / 2, BOARD_Z / 2, BOARD_X * 5);
@@ -160,16 +155,12 @@ main (int argc, char **argv)
                     if (curr_board[x][y][z])
                         window.draw_cube(x, y, z);
 
-        if (window.get_ticks() - last_time > PERIOD) {
-            step_board();
-            last_time = window.get_ticks();
-        }
+        //if (window.get_ticks() - last_time > PERIOD) {
+        //    step_board();
+        //    last_time = window.get_ticks();
+        //}
         window.render();
     }
-
-    //init_board();
-    //for (int i = 0; i < 100; i++)
-    //    step_board();
 
     return 0;
 }

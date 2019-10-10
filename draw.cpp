@@ -13,8 +13,9 @@ checkGLError()
     }
 }
 
+
 static const GLchar* vertex_source =
-    "#version 140\n"
+    "#version 130\n"
     "in vec3 vertex;\n"
     "in vec3 norm;\n"
 	"out vec3 FragPos;\n"
@@ -25,12 +26,12 @@ static const GLchar* vertex_source =
     "void main()\n"
     "{\n"
     "   FragPos = vec3(model * vec4(vertex, 1.0));\n"
-    "   Normal = mat3(transpose(inverse(model))) * norm;\n"
+    "   Normal = norm;\n"
     "   gl_Position = projection * view * model * vec4(vertex.xyz, 1.0);\n"
     "}";
 
 static const GLchar* fragment_source =
-    "#version 140\n"
+    "#version 130\n"
     "out vec4 FragColor;\n"
     "in vec3 Normal;\n"
     "in vec3 FragPos;\n"
@@ -49,14 +50,7 @@ static const GLchar* fragment_source =
     "   float diff = max(dot(norm, lightDir), 0.0);\n"
     "   vec3 diffuse = diff * lightColor;\n"
     "\n"
-    "   /* specular */\n"
-    "   float specularStrength = 0.25;\n"
-    "   vec3 viewDir = normalize(lightPos - FragPos);\n"
-    "   vec3 reflectDir = reflect(-lightDir, norm);  \n"
-    "   float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);\n"
-    "   vec3 specular = specularStrength * spec * lightColor;  \n"
-    "\n"
-    "   vec3 result = (ambient + diffuse + specular) * objectColor;\n"
+    "   vec3 result = (ambient + diffuse) * objectColor;\n"
     "   FragColor = vec4(result, 1.0);\n"
     "}";
 
@@ -460,7 +454,7 @@ Window::Window ()
 
     /* Get screen width and height since we're in fullscreen */
     SDL_GetCurrentDisplayMode(0, &display);
-    this->camera = Camera(display.w, display.h, ARCBALL);
+    this->camera = Camera(display.w, display.h, FPS);
 
     this->glContext = SDL_GL_CreateContext(window);
     if (!this->glContext) {
