@@ -433,6 +433,8 @@ Window::Window ()
 {
     SDL_DisplayMode display;
     GLuint vertex_id, norm_id;
+    display.w = 960;
+    display.h = 720;
 
     object_positions.reserve(50);
 
@@ -443,8 +445,9 @@ Window::Window ()
 
     this->window = SDL_CreateWindow("Model", 
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
-        800, 600, /* these won't be used if FULLSCREEN is given below */
-        SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN_DESKTOP);
+        display.w, display.h, /* these won't be used if FULLSCREEN is given below */
+        SDL_WINDOW_OPENGL);
+        //SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN_DESKTOP);
 
     if (!this->window) {
         fprintf(stderr, "Window could not be created: %s\n", SDL_GetError());
@@ -452,8 +455,6 @@ Window::Window ()
         exit(1);
     }
 
-    /* Get screen width and height since we're in fullscreen */
-    SDL_GetCurrentDisplayMode(0, &display);
     this->camera = Camera(display.w, display.h, FPS);
 
     this->glContext = SDL_GL_CreateContext(window);
