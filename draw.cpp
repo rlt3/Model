@@ -433,8 +433,8 @@ Window::Window ()
 {
     SDL_DisplayMode display;
     GLuint vertex_id, norm_id;
-    display.w = 960;
-    display.h = 720;
+    display.w = 1920;
+    display.h = 1080;
 
     object_positions.reserve(50);
 
@@ -446,7 +446,7 @@ Window::Window ()
     this->window = SDL_CreateWindow("Model", 
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
         display.w, display.h, /* these won't be used if FULLSCREEN is given below */
-        SDL_WINDOW_OPENGL);
+        SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS);
         //SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN_DESKTOP);
 
     if (!this->window) {
@@ -590,7 +590,7 @@ Window::handle_input ()
                                             camera.screen_x, camera.screen_y,
                                             camera.view(),
                                             camera.projection());
-            if (e.button.button == SDL_BUTTON(SDL_BUTTON_MIDDLE)) {
+            if (e.button.button == SDL_BUTTON(SDL_BUTTON_RIGHT)) {
                 camera.look(e.motion.xrel, e.motion.yrel);
             }
             break;
@@ -598,8 +598,6 @@ Window::handle_input ()
     }
 
     state = SDL_GetKeyboardState(NULL);
-
-    SDL_SetRelativeMouseMode((SDL_bool) state[SDL_SCANCODE_LSHIFT]);
 
     /* Quit */
     if (state[SDL_SCANCODE_ESCAPE]) {
